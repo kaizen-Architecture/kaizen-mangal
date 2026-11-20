@@ -21,6 +21,9 @@
 - Section 13 lists **Open Questions** where a decision is explicitly requested from reviewers.
 - Line references (`file.go:NN`) point to the baseline commit `a6be0fa`. Kaizen references point to `kaizen-Architecture/Kaizen@main`.
 
+> [!NOTE]
+> **Scope of this project.** `kaizen-mangal` is a general-purpose scraping engine: an HTTP/TLS stack, a headless browser bridge, a Lua runtime and a verified downloader. It contains no site-specific logic. Which sites a user targets, and whether they are entitled to access them, is the user's responsibility and outside the scope of this RFC.
+
 ---
 
 ## 1. Motivation & Problem Statement
@@ -41,7 +44,7 @@ The codebase maintains **three disconnected HTTP clients**, none of which perfor
    - Allocates a fresh `http.Transport{}` per `http.client()` call with default Go TLS and `Chrome/106.0.0.0`.
    - Uses an ephemeral in-memory `cookiejar.Jar` per Lua client instance that is discarded on process exit and **never shared** with `network.Client`.
 
-Modern WAFs (Cloudflare, DDoS-Guard, Akamai) reject these requests with `403 Forbidden` or JS/Turnstile challenges. Even when a Lua scraper clears a challenge, `source/page.go` fails to download images due to missing cookies and mismatched TLS/User-Agent fingerprints. Kaizen's own `Scrappers/Incompatible_Sites.md` lists multiple sources rejected for exactly these reasons.
+Modern WAFs (Cloudflare, DDoS-Guard, Akamai) reject these requests with `403 Forbidden` or JS/Turnstile challenges. Even when a Lua scraper clears a challenge, `source/page.go` fails to download images due to missing cookies and mismatched TLS/User-Agent fingerprints. These failures are generic: they affect any Lua scraper whose target sits behind a modern WAF, regardless of the site.
 
 ### 1.2 Broken Headless Browser & Concurrency Hazards
 1. **Destructive global temp wipes:**
@@ -91,7 +94,7 @@ Verified against `kaizen-Architecture/Kaizen@main`:
 |---|---|---|
 | Keep upstream `metafates/mangal v4.0.6` unmodified | ❌ Rejected | Archived (read-only since April 2025). No fixes will ever land for any issue in Section 1. |
 | `luevano/mangal` (community `v5` fork) | ❌ Rejected | Full architectural rewrite with a different CLI and output contract; not a drop-in replacement for Kaizen's `mangal.ts` integration, and we would not control its roadmap. |
-| `manga-py` | ❌ Rejected | Archived since April 2024; its author recommends `gallery-dl`. Most providers are stale. Its provider list (213 entries) remains useful as an inventory of candidate Lua scrapers. |
+| `manga-py` | ❌ Rejected | Archived since April 2024; its author recommends `gallery-dl`. Most providers are stale. |
 | `gallery-dl` as the primary engine | ❌ Rejected as replacement | No search-by-title (URL-driven only), per-extractor JSON schemas, Python runtime, and its `requests` stack hits the same Cloudflare fingerprinting wall. Would require rewriting Kaizen's catalog/search layer. |
 | `gallery-dl` as a secondary "add by URL" backend | ⏸️ Deferred | Potentially valuable later behind a provider interface in Kaizen; out of scope for this RFC. |
 | Suwayomi / Tachiyomi-extension runtime | ⏸️ Deferred | JVM-based and heavy for 2 GB homelab hosts; different extension model. |
@@ -104,7 +107,7 @@ Verified against `kaizen-Architecture/Kaizen@main`:
 ### Goals
 - **Unified HTTP & TLS Impersonation:** route `network.Client`, `provider/generic` (Colly) and Lua `require("http")` through a single swappable `network.HTTPClient` interface backed by `bogdanfinn/tls-client` (`CGO_ENABLED=0`).
 - **Persistent Shared Cookie Jar:** share cookies (`cf_clearance`, sessions) across Lua scrapers, Go image downloaders and concurrent CLI subprocesses safely.
-- **Deterministic Anti-Bot Solver:** external solver (FlareSolverr / Byparr) as Tier 1 and fixed headless `go-rod` as Tier 2 fallback, guarded by a per-domain circuit breaker.
+- **Deterministic Challenge Handling:** external solver (FlareSolverr / Byparr) as Tier 1 and fixed headless `go-rod` as Tier 2 fallback, guarded by a per-domain circuit breaker.
 - **Download Integrity (fail closed):** never print a chapter path to stdout unless the archive is complete, structurally valid and contains only real images.
 - **Production-Grade Headless Browser:** eliminate temp-dir race conditions, panics, zombie processes and Docker failures; add stealth, timeouts, remote CDP and cookie sync.
 - **Additive-Only Lua API:** every existing Lua module and function keeps its name, signature and return shape; new capabilities are additions only.
@@ -112,7 +115,7 @@ Verified against `kaizen-Architecture/Kaizen@main`:
 - **Zero-CGO Static Multi-Arch Builds:** `CGO_ENABLED=0` binaries (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`) and GHCR multi-arch Docker images (minimal + `-chromium`), with Kaizen's two-tier release model (staging + stable).
 
 ### Hard Constraints
-- **No new site-specific scrapers in this repository.** Site logic lives in Lua scraper repositories (e.g. `Mangal_Scrappers`). The four inherited built-in providers stay untouched during Stage 1 for drop-in parity and are removed only after the Kaizen-side migration in Phase 9.
+- **No site-specific logic is maintained or distributed by this project.** `kaizen-mangal` is a scraping *engine*: it ships no curated list of sites and no project-maintained scrapers. Lua scrapers are supplied by the user (hand-written, or generated on demand by Kaizen from a URL the user provides). The four inherited upstream built-in providers (`Mangadex`, `Manganato`, `Manganelo`, `Mangapill`) stay untouched during Stage 1 solely for drop-in parity, and are removed in Phase 9 with no replacement list maintained by this project.
 - **Offline, deterministic tests only:** CI tests use local `httptest.Server` instances or static fixtures, never real site URLs. Inherited live-site tests are deleted or moved behind a `//go:build live` tag that CI never runs.
 - **Original attribution preserved:** retain the original MIT `LICENSE` and upstream attribution notices from `metafates/mangal` and `metafates/mangal-lua-libs`.
 - **Frozen CLI/JSON contract during migration (Stages 1–2):** byte-compatible with what Kaizen parses today (Section 6.F.2). After migration, the contract may evolve **only** through an explicit `contract_version` bump agreed with Kaizen.
@@ -120,7 +123,8 @@ Verified against `kaizen-Architecture/Kaizen@main`:
 ### Non-Goals
 - Rewriting the Bubble Tea TUI or the AniList integration.
 - Integrating paid third-party human CAPTCHA-solving services in v1.
-- Guaranteed bypass of enterprise bot management (DataDome, Akamai Bot Manager, interactive CAPTCHAs). Best effort only.
+- Support for enterprise bot-management systems and interactive CAPTCHAs. Best effort only.
+- Maintaining, curating or publishing lists of supported sites or ready-made scrapers for specific sites.
 - Multi-backend engines (`gallery-dl`, Suwayomi) — see Section 2.
 
 ---
@@ -157,7 +161,7 @@ flowchart TD
         CB["Per-Domain Circuit Breaker"]
     end
 
-    subgraph Solvers["Anti-Bot Solvers"]
+    subgraph Solvers["Challenge Solvers"]
         FLARE["External Solver (FlareSolverr / Byparr)"]
         ROD["Fixed Headless Browser (go-rod + stealth / Remote CDP)"]
     end
@@ -431,7 +435,7 @@ Because `kaizen-mangal` lives in an independent repository, Kaizen MUST be able 
 - [ ] `40-config`: `kaizen-mangal` equivalents of the config copy, `formats.use=cbz` initialization and cache cleanup.
 - [ ] `docker/Dockerfile`: `KAIZEN_MANGAL_FORMATS_USE=cbz`, `KAIZEN_MANGAL_CONFIG_PATH`, `KAIZEN_MANGAL_CACHE_PATH`, `KAIZEN_MANGAL_SOURCES_PATH`.
 - [ ] AI scraper generator switches validation to `sources validate <file> --json`, falling back to the current check when the active binary is upstream `mangal`.
-- [ ] Built-in provider audit: count mangas/`MangaSource` rows bound to `Mangadex`, `Manganato`, `Manganelo`, `Mangapill` and migrate them to Lua equivalents before Phase 9.
+- [ ] Built-in provider audit: count mangas/`MangaSource` rows bound to `Mangadex`, `Manganato`, `Manganelo`, `Mangapill` and surface them in the Kaizen UI so the owner can re-bind them to their own sources before Phase 9. Kaizen MUST NOT auto-migrate them to project-provided scrapers.
 - [ ] Optional: reference `docker-compose.yml` adds a commented-out solver service (FlareSolverr/Byparr) sharing the app's network namespace.
 
 ---
@@ -575,7 +579,7 @@ Proposed i18n keys (`public/locales/en/settings.json` and `public/locales/es/set
 | `scraperCore.update` | Update core | Actualizar motor |
 | `scraperCore.rollback` | Roll back | Revertir |
 | `scraperCore.doctor` | Run diagnostics | Ejecutar diagnóstico |
-| `scraperCore.breakerOpen` | Source cooling down after repeated anti-bot failures | Fuente en pausa tras fallos anti-bot repetidos |
+| `scraperCore.breakerOpen` | Source cooling down after repeated challenge failures | Fuente en pausa tras fallos de verificación repetidos |
 
 ---
 
@@ -628,7 +632,7 @@ Implementation is split into **two sequential stages** with a hard local validat
 - [ ] **Phase 8: Kaizen iOS App Server Admin Integration**
   - Reflect `network.*` / `headless.*` settings, core status, update/rollback and doctor results in the Server Admin view (EN/ES `Localizable.xcstrings` parity).
 - [ ] **Phase 9: Built-in Provider Removal & Upstream `mangal` Retirement**
-  - After the audit confirms zero mangas bound to `Mangadex`, `Manganato`, `Manganelo`, `Mangapill` (or they are migrated to Lua equivalents), remove the built-in providers from `kaizen-mangal`.
+  - After the audit confirms zero mangas bound to `Mangadex`, `Manganato`, `Manganelo`, `Mangapill` (or the server owner has re-bound them to sources of their own), remove the built-in providers from `kaizen-mangal`. No replacement scrapers are provided by this project.
   - Remove upstream `mangal` from Kaizen's image and the `MANGAL_*` variables.
 
 ---
@@ -638,7 +642,7 @@ Implementation is split into **two sequential stages** with a hard local validat
 | # | Question | Proposal |
 |---|---|---|
 | Q1 | Which pinned TLS profile should be the default, and who bumps it? | Choose in Phase 3 to match the reference solver's Chrome major version; bump only via a `feat(network)` release note. |
-| Q2 | Built-in providers: remove in Phase 9, or keep permanently? | Remove after migration, with Lua equivalents maintained in `Mangal_Scrappers`. |
+| Q2 | Built-in providers: remove in Phase 9, or keep permanently? | Remove in Phase 9. The project will not maintain replacement scrapers; users re-add sources with their own Lua scrapers. |
 | Q3 | Tier 2 headless fallback off by default — agreed? | Yes, because of RAM on low-end hosts; external solver or remote CDP preferred. |
 | Q4 | Should `IsDownloaded` also verify archive integrity (opening each CBZ), or rely on atomic writes + Kaizen's existing CBZ validation for legacy files? | Perform a cheap `archive/zip.OpenReader` EOCD/central-directory check in `IsDownloaded` for `.cbz`/`.zip` (< 0.2 ms, does not decompress entries) on top of atomic writes — automatically self-heals legacy corrupt CBZs written by upstream `mangal`. |
 | Q5 | Versioning: continue upstream numbering (`v4.1.0`) or restart (`v1.0.0`)? | `v4.1.0`, to make lineage and Kaizen compatibility obvious. |
