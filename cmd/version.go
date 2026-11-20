@@ -1,16 +1,16 @@
 package cmd
 
 import (
-	"github.com/metafates/mangal/color"
-	"github.com/metafates/mangal/style"
-	"github.com/metafates/mangal/version"
+	"github.com/kaizen-architecture/kaizen-mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/version"
 	"github.com/samber/lo"
 	"os"
 	"runtime"
 	"strings"
 	"text/template"
 
-	"github.com/metafates/mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
 	"github.com/spf13/cobra"
 )
 

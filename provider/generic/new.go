@@ -3,9 +3,9 @@ package generic
 import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/source"
-	"github.com/metafates/mangal/where"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/where"
 	"path/filepath"
 	"strings"
 	"time"

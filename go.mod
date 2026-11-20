@@ -1,4 +1,4 @@
-module github.com/metafates/mangal
+module github.com/kaizen-architecture/kaizen-mangal
 
 go 1.18
 

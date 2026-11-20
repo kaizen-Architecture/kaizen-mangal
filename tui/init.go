@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/provider"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/provider"
 	"github.com/spf13/viper"
 )
 

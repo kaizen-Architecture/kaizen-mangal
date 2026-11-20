@@ -2,7 +2,7 @@ package open
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
 	"os"
 	"os/exec"
 	"path/filepath"

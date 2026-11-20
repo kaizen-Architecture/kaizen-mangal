@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/where"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/where"
 	"github.com/samber/lo"
 	"github.com/spf13/viper"
 	"os"

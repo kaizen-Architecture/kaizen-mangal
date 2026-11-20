@@ -2,8 +2,8 @@ package mini
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/color"
-	"github.com/metafates/mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
 	"github.com/samber/lo"
 	"os"
 	"strconv"

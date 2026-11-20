@@ -2,12 +2,12 @@ package mini
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/downloader"
-	"github.com/metafates/mangal/history"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/provider"
-	"github.com/metafates/mangal/source"
-	"github.com/metafates/mangal/util"
+	"github.com/kaizen-architecture/kaizen-mangal/downloader"
+	"github.com/kaizen-architecture/kaizen-mangal/history"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/provider"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
 	"github.com/samber/lo"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"

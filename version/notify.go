@@ -2,11 +2,11 @@ package version
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/color"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/icon"
-	"github.com/metafates/mangal/style"
-	"github.com/metafates/mangal/util"
+	"github.com/kaizen-architecture/kaizen-mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/icon"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
 )
 
 func Notify() {

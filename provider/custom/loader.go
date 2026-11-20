@@ -3,9 +3,9 @@ package custom
 import (
 	"fmt"
 	libs "github.com/metafates/mangal-lua-libs"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/source"
-	"github.com/metafates/mangal/util"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
 	lua "github.com/yuin/gopher-lua"
 	"github.com/yuin/gopher-lua/parse"
 )

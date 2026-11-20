@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/metafates/mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
 	"github.com/samber/lo"
 	. "github.com/smartystreets/goconvey/convey"
 	"path/filepath"

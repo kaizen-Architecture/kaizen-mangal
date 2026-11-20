@@ -2,7 +2,7 @@ package style
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/metafates/mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/color"
 )
 
 var (
