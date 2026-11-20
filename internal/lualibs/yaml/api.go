@@ -92,7 +92,7 @@ func toYAML(L *lua.LState, visited map[*lua.LTable]bool, value lua.LValue) inter
 		})
 		return ret
 	default:
-		L.RaiseError(fmt.Sprintf("cannot encode values with %s in them", value.Type()))
+		L.RaiseError("cannot encode values with %s in them", value.Type())
 		return nil
 	}
 }
