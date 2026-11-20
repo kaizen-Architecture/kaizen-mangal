@@ -46,6 +46,12 @@ func Download(chapter *source.Chapter, progress func(string)) (string, error) {
 		return "", err
 	}
 	log.Info("found " + fmt.Sprintf("%d", len(pages)) + " pages")
+	if len(pages) == 0 {
+		err = fmt.Errorf("no pages found for chapter %q", chapter.Name)
+		log.Error(err)
+		return "", err
+	}
+	chapter.Pages = pages
 
 	err = chapter.DownloadPages(false, progress)
 	if err != nil {

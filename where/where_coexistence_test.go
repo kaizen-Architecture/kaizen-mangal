@@ -1,9 +1,11 @@
 package where
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
 )
@@ -13,7 +15,7 @@ import (
 func TestCoexistencePaths(t *testing.T) {
 	filesystem.SetOsFs()
 
-	// Default paths must end in kaizen-mangal (not mangal).
+	// Default paths must use kaizen-mangal (not mangal).
 	t.Setenv(EnvConfigPath, "")
 	t.Setenv(EnvCachePath, "")
 	t.Setenv(EnvSourcesPath, "")
@@ -27,8 +29,8 @@ func TestCoexistencePaths(t *testing.T) {
 		t.Errorf("default Cache() = %q, want base 'kaizen-mangal'", cacheDefault)
 	}
 	tempDefault := Temp()
-	if filepath.Base(tempDefault) != "kaizen-mangal" {
-		t.Errorf("default Temp() = %q, want base 'kaizen-mangal'", tempDefault)
+	if !strings.HasPrefix(filepath.Base(tempDefault), "kaizen-mangal-") {
+		t.Errorf("default Temp() = %q, want per-process prefix 'kaizen-mangal-'", tempDefault)
 	}
 	if !strings.HasPrefix(Sources(), cfgDefault) {
 		t.Errorf("default Sources() = %q, want under Config() %q", Sources(), cfgDefault)
@@ -51,5 +53,33 @@ func TestCoexistencePaths(t *testing.T) {
 	}
 	if got := Sources(); filepath.Clean(got) != filepath.Clean(customSources) {
 		t.Errorf("Sources() = %q, want %q", got, customSources)
+	}
+}
+
+func TestCleanStaleTempPreservesActiveSiblings(t *testing.T) {
+	filesystem.SetOsFs()
+	base := os.TempDir()
+
+	staleDir := filepath.Join(base, "kaizen-mangal-999991-stale-test")
+	activeDir := filepath.Join(base, "kaizen-mangal-999992-active-test")
+	for _, d := range []string{staleDir, activeDir} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.RemoveAll(d) })
+	}
+
+	old := time.Now().Add(-2 * time.Hour)
+	if err := os.Chtimes(staleDir, old, old); err != nil {
+		t.Fatal(err)
+	}
+
+	CleanStaleTemp(time.Hour)
+
+	if _, err := os.Stat(staleDir); !os.IsNotExist(err) {
+		t.Errorf("expected stale temp dir %q to be removed", staleDir)
+	}
+	if _, err := os.Stat(activeDir); err != nil {
+		t.Errorf("expected active sibling temp dir %q to remain intact, got err: %v", activeDir, err)
 	}
 }

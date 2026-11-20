@@ -1,8 +1,11 @@
 package where
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/kaizen-architecture/kaizen-mangal/constant"
 	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
@@ -101,9 +104,40 @@ func Cache() string {
 	return mkdir(cacheDir)
 }
 
-// Temp path
-// Will create the directory if it doesn't exist
+// Temp path returns a per-process temporary directory so concurrent workers
+// never collide or delete each other's files (RFC 0001 Pillar D.3).
 func Temp() string {
-	tempDir := filepath.Join(os.TempDir(), constant.Mangal)
+	tempDir := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%d", constant.Mangal, os.Getpid()))
 	return mkdir(tempDir)
+}
+
+// CleanStaleTemp removes sibling kaizen-mangal-<pid> temp directories older than maxAge,
+// never touching the current process or active sibling workers.
+func CleanStaleTemp(maxAge time.Duration) {
+	base := os.TempDir()
+	entries, err := os.ReadDir(base)
+	if err != nil {
+		return
+	}
+
+	prefix := constant.Mangal + "-"
+	self := fmt.Sprintf("%s-%d", constant.Mangal, os.Getpid())
+	cutoff := time.Now().Add(-maxAge)
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasPrefix(name, prefix) || name == self {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().Before(cutoff) {
+			_ = os.RemoveAll(filepath.Join(base, name))
+		}
+	}
 }
