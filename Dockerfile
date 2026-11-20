@@ -1,22 +1,49 @@
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
+
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ARG VERSION=1.0.0
+ARG REVISION=dev
+ARG BUILT_AT=unknown
+ARG BUILT_BY=docker
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+    -trimpath \
+    -ldflags="-s -w -X 'github.com/kaizen-architecture/kaizen-mangal/constant.Version=${VERSION}' -X 'github.com/kaizen-architecture/kaizen-mangal/constant.BuiltAt=${BUILT_AT}' -X 'github.com/kaizen-architecture/kaizen-mangal/constant.BuiltBy=${BUILT_BY}' -X 'github.com/kaizen-architecture/kaizen-mangal/constant.Revision=${REVISION}'" \
+    -o /out/kaizen-mangal .
+
 FROM alpine:latest
 
-ENV MANGAL_DOWNLOADER_PATH=/downloads
-ENV MANGAL_USER=abc
-ENV MANGAL_UID=1000
-ENV MANGAL_GID=1000
+RUN apk add --no-cache ca-certificates tzdata
+
+ENV KAIZEN_MANGAL_DOWNLOADER_PATH=/downloads
+ENV KAIZEN_MANGAL_CONFIG_PATH=/config
+ENV KAIZEN_MANGAL_CACHE_PATH=/config/cache
+ENV KAIZEN_MANGAL_HEADLESS_ALLOW_DOWNLOAD=false
+ENV KAIZEN_MANGAL_USER=abc
+ENV KAIZEN_MANGAL_UID=1000
+ENV KAIZEN_MANGAL_GID=1000
 
 WORKDIR "/config"
-RUN mkdir -p "${MANGAL_DOWNLOADER_PATH}" && addgroup -g "${MANGAL_GID}" "${MANGAL_USER}" && adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "$(pwd)" \
-    --ingroup "${MANGAL_USER}" \
-    --no-create-home \
-    --uid "${MANGAL_UID}" \
-    "${MANGAL_USER}" && \
-    chown abc:abc /config "${MANGAL_DOWNLOADER_PATH}"
+RUN mkdir -p "${KAIZEN_MANGAL_DOWNLOADER_PATH}" "${KAIZEN_MANGAL_CACHE_PATH}" && \
+    addgroup -g "${KAIZEN_MANGAL_GID}" "${KAIZEN_MANGAL_USER}" && \
+    adduser \
+      --disabled-password \
+      --gecos "" \
+      --home "/config" \
+      --ingroup "${KAIZEN_MANGAL_USER}" \
+      --no-create-home \
+      --uid "${KAIZEN_MANGAL_UID}" \
+      "${KAIZEN_MANGAL_USER}" && \
+    chown -R "${KAIZEN_MANGAL_USER}:${KAIZEN_MANGAL_USER}" /config "${KAIZEN_MANGAL_DOWNLOADER_PATH}"
 
-COPY mangal /usr/local/bin/mangal
-RUN chmod +x /usr/local/bin/mangal
-USER "${MANGAL_USER}"
-ENTRYPOINT ["/usr/local/bin/mangal"]
+COPY --from=builder /out/kaizen-mangal /usr/local/bin/kaizen-mangal
+RUN chmod +x /usr/local/bin/kaizen-mangal
+
+USER "${KAIZEN_MANGAL_USER}"
+ENTRYPOINT ["/usr/local/bin/kaizen-mangal"]
