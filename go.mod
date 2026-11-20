@@ -1,6 +1,6 @@
 module github.com/kaizen-architecture/kaizen-mangal
 
-go 1.18
+go 1.27.4
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
