@@ -2,7 +2,7 @@ package custom
 
 import (
 	"fmt"
-	libs "github.com/metafates/mangal-lua-libs"
+	libs "github.com/kaizen-architecture/kaizen-mangal/internal/lualibs"
 	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
 	"github.com/kaizen-architecture/kaizen-mangal/source"
 	"github.com/kaizen-architecture/kaizen-mangal/util"
