@@ -21,7 +21,7 @@ func init() {
 var miniCmd = &cobra.Command{
 	Use:   "mini",
 	Short: "Launch in the mini mode",
-	Long: `Launch mangal in the mini mode.
+	Long: `Launch kaizen-mangal in the mini mode.
 Will try to mimic ani-cli.`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		if _, err := converter.Get(viper.GetString(key.FormatsUse)); err != nil {

@@ -15,9 +15,9 @@ var runCmd = &cobra.Command{
 	Use:   "run [file]",
 	Short: "Run lua file",
 	Long: `Runs Lua5.1 VM. Useful for debugging.
-Or you can use mangal as a standalone lua interpreter.`,
+Or you can use kaizen-mangal as a standalone lua interpreter.`,
 	Args:    cobra.ExactArgs(1),
-	Example: "  mangal run ./test.lua",
+	Example: "  kaizen-mangal run ./test.lua",
 	Run: func(cmd *cobra.Command, args []string) {
 		sourcePath := args[0]
 

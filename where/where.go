@@ -1,16 +1,21 @@
 package where
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/kaizen-architecture/kaizen-mangal/constant"
 	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
 	"github.com/kaizen-architecture/kaizen-mangal/key"
 	"github.com/samber/lo"
 	"github.com/spf13/viper"
-	"os"
-	"path/filepath"
 )
 
-const EnvConfigPath = "MANGAL_CONFIG_PATH"
+const (
+	EnvConfigPath  = "KAIZEN_MANGAL_CONFIG_PATH"
+	EnvCachePath   = "KAIZEN_MANGAL_CACHE_PATH"
+	EnvSourcesPath = "KAIZEN_MANGAL_SOURCES_PATH"
+)
 
 // mkdir creates a directory and all parent directories if they don't exist
 // will return the path of the directory
@@ -24,7 +29,7 @@ func mkdir(path string) string {
 func Config() string {
 	var path string
 
-	if customDir, present := os.LookupEnv(EnvConfigPath); present {
+	if customDir, present := os.LookupEnv(EnvConfigPath); present && customDir != "" {
 		path = customDir
 	} else {
 		path = filepath.Join(lo.Must(os.UserConfigDir()), constant.Mangal)
@@ -34,8 +39,12 @@ func Config() string {
 }
 
 // Sources path
-// Will create the directory if it doesn't exist
+// Will create the directory if it doesn't exist.
+// Isolated under Config()/sources by default; opt-in override via KAIZEN_MANGAL_SOURCES_PATH.
 func Sources() string {
+	if customDir, present := os.LookupEnv(EnvSourcesPath); present && customDir != "" {
+		return mkdir(customDir)
+	}
 	return mkdir(filepath.Join(Config(), "sources"))
 }
 
@@ -79,6 +88,10 @@ func Downloads() string {
 // Cache path
 // Will create the directory if it doesn't exist
 func Cache() string {
+	if customDir, present := os.LookupEnv(EnvCachePath); present && customDir != "" {
+		return mkdir(customDir)
+	}
+
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		cacheDir = filepath.Join(".", "cache")

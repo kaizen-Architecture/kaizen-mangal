@@ -213,7 +213,7 @@ func (c *Chapter) ComicInfo() *ComicInfo {
 		Letterer:   strings.Join(c.Manga.Metadata.Staff.Lettering, ","),
 		Translator: strings.Join(c.Manga.Metadata.Staff.Translation, ","),
 		Tags:       strings.Join(c.Manga.Metadata.Tags, ","),
-		Notes:      "Downloaded with Mangal. https://github.com/metafates/mangal",
+		Notes:      "Downloaded with kaizen-mangal. https://github.com/kaizen-Architecture/kaizen-mangal",
 		Manga:      "YesAndRightToLeft",
 	}
 }

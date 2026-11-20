@@ -101,7 +101,7 @@ func (f *Field) Pretty() string {
 
 func (f *Field) Env() string {
 	env := strings.ToUpper(EnvKeyReplacer.Replace(f.Key))
-	appPrefix := strings.ToUpper(constant.Mangal + "_")
+	appPrefix := strings.ToUpper(constant.EnvPrefix + "_")
 
 	if strings.HasPrefix(env, appPrefix) {
 		return env
@@ -315,12 +315,12 @@ Use "any" to show all languages`,
 	},
 	{
 		key.InstallerUser,
-		"metafates",
+		"",
 		"Custom scrapers repository owner",
 	},
 	{
 		key.InstallerRepo,
-		"mangal-scrapers",
+		"",
 		"Custom scrapers repository name",
 	},
 	{

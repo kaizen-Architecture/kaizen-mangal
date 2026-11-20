@@ -14,9 +14,9 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  build        Build the mangal binary"
-	@echo "  install      Install the mangal binary"
-	@echo "  uninstall    Uninstall the mangal binary"
+	@echo "  build        Build the kaizen-mangal binary"
+	@echo "  install      Install the kaizen-mangal binary"
+	@echo "  uninstall    Uninstall the kaizen-mangal binary"
 	@echo "  test         Run the tests"
 	@echo "  gif          Generate usage gifs"
 	@echo "  help         Show this help message"
@@ -25,15 +25,14 @@ help:
 install:
 	@go install "$(build_flags)"
 
-
 build:
-	@go build "$(build_flags)"
+	@go build -o kaizen-mangal "$(build_flags)"
 
 test:
 	@go test ./...
 
 uninstall:
-	@rm -f $(shell which mangal)
+	@rm -f $(shell which kaizen-mangal)
 
 gif:
 	@vhs assets/tui.tape

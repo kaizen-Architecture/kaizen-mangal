@@ -124,8 +124,8 @@ func init() {
 var sourcesInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Browse and install custom scrapers",
-	Long: `Browse and install custom scrapers from official GitHub repo.
-https://github.com/metafates/mangal-scrapers`,
+	Long:  `Browse and install custom scrapers from a user-configured GitHub repo (installer.user / installer.repo).`,
+
 	Run: func(cmd *cobra.Command, args []string) {
 		handleErr(tui.Run(&tui.Options{Install: true}))
 	},

@@ -55,7 +55,7 @@ func setPaths() {
 
 // setEnvs sets the environment variables
 func setEnvs() {
-	viper.SetEnvPrefix(constant.Mangal)
+	viper.SetEnvPrefix(constant.EnvPrefix)
 	viper.SetEnvKeyReplacer(EnvKeyReplacer)
 
 	for _, env := range EnvExposed {
