@@ -14,4 +14,4 @@ RFCs follow the ecosystem-wide process defined in [Kaizen RFC 0000 — RFC Proce
 
 | ID | Title | Status | Author | Date |
 |---|---|---|---|---|
-| [RFC 0001](./0001-network-resilience-and-modernization.md) | Network Resilience, Download Integrity, Headless Fix & Toolchain Modernization | 📝 DRAFT | d4nj3s | 2026-11-19 |
+| [RFC 0001](./0001-network-resilience-and-modernization.md) | Network Resilience, Download Integrity, Headless Fix & Toolchain Modernization | ✅ APPROVED | d4nj3s | 2026-11-19 |

@@ -2,11 +2,11 @@
 
 - **ID:** RFC 0001
 - **Title:** Network Resilience, Download Integrity, Headless Browser Fix, Kaizen Integration & Toolchain Modernization
-- **Status:** 📝 `DRAFT` — open for comments
+- **Status:** ✅ `APPROVED`
 - **Author:** d4nj3s & Kaizen Core Team
 - **Date:** 2026-11-19
 - **Objective:** Turn the unmodified `mangal v4.0.6` import into a resilient, Kaizen-owned scraping core that downloads reliably behind modern WAFs and never reports a corrupt chapter as downloaded.
-- **Repository:** `github.com/kaizen-Architecture/kaizen-mangal`
+- **Repository:** `github.com/kaizen-Architecture/kaizen-mangal` (Go module path: `github.com/kaizen-architecture/kaizen-mangal`)
 - **Baseline:** unmodified import of `metafates/mangal v4.0.6` (commit `a6be0fa`)
 - **Process:** follows [Kaizen RFC 0000 — RFC Process & Architectural Governance](https://github.com/kaizen-Architecture/Kaizen/blob/main/docs/rfcs/0000-rfc-process.md)
 
@@ -115,7 +115,7 @@ Verified against `kaizen-Architecture/Kaizen@main`:
 - **Zero-CGO Static Multi-Arch Builds:** `CGO_ENABLED=0` binaries (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`) and GHCR multi-arch Docker images (minimal + `-chromium`), with Kaizen's two-tier release model (staging + stable).
 
 ### Hard Constraints
-- **No site-specific logic is maintained or distributed by this project.** `kaizen-mangal` is a scraping *engine*: it ships no curated list of sites and no project-maintained scrapers. Lua scrapers are supplied by the user (hand-written, or generated on demand by Kaizen from a URL the user provides). The four inherited upstream built-in providers (`Mangadex`, `Manganato`, `Manganelo`, `Mangapill`) stay untouched during Stage 1 solely for drop-in parity, and are removed in Phase 9 with no replacement list maintained by this project.
+- **No site-specific logic is maintained or distributed by this project.** `kaizen-mangal` is a scraping *engine*: it ships no curated list of sites and no project-maintained scrapers. Lua scrapers are supplied by the user (hand-written, or generated on demand by Kaizen from a URL the user provides). The four inherited upstream built-in providers (`Mangadex`, `Manganato`, `Manganelo`, `Mangapill`) stay untouched during Stage 1 solely for drop-in parity, and are removed in Phase 8 with no replacement list maintained by this project.
 - **Offline, deterministic tests only:** CI tests use local `httptest.Server` instances or static fixtures, never real site URLs. Inherited live-site tests are deleted or moved behind a `//go:build live` tag that CI never runs.
 - **Original attribution preserved:** retain the original MIT `LICENSE` and upstream attribution notices from `metafates/mangal` and `metafates/mangal-lua-libs`.
 - **Frozen CLI/JSON contract during migration (Stages 1–2):** byte-compatible with what Kaizen parses today (Section 6.F.2). After migration, the contract may evolve **only** through an explicit `contract_version` bump agreed with Kaizen.
@@ -197,7 +197,7 @@ flowchart TD
 ### Pillar A: Internalize `mangal-lua-libs` & Guarantee Lua API Compatibility
 
 1. Copy `vendor/github.com/metafates/mangal-lua-libs/*` into `internal/lualibs/` (preserving `internal/lualibs/LICENSE`).
-2. Update `provider/custom/loader.go` and internal imports to `github.com/kaizen-Architecture/kaizen-mangal/internal/lualibs/...`.
+2. Update `provider/custom/loader.go` and internal imports to `github.com/kaizen-architecture/kaizen-mangal/internal/lualibs/...`.
 3. Remove `github.com/metafates/mangal-lua-libs` from `go.mod` and delete the `vendor/` directory.
 4. Wire `internal/lualibs/http` directly to `network.NewClient(...)`.
 5. **Lua API compatibility guarantee:**
@@ -232,7 +232,7 @@ type HTTPClient interface {
 - Single source of truth for TLS profile, HTTP/2 frame profile, `User-Agent`, `Sec-Ch-Ua`, `Sec-Ch-Ua-Mobile`, `Sec-Ch-Ua-Platform` and `Accept-Language`.
 - Configurable via `network.impersonate` / `KAIZEN_MANGAL_NETWORK_IMPERSONATE`.
 - **Pinned profiles only.** Values are explicit versions (e.g. `chrome_131`, `firefox_133`, `none`), never a floating `*_latest` alias, so a dependency bump never silently changes the fingerprint. The default is chosen in Phase 3 and bumped deliberately in release notes.
-- **Profile/solver coherence:** the default profile's major browser version MUST match the Chrome version of the solver image shipped in Kaizen's reference `docker-compose` (Tier 1) and of the `-chromium` image (Tier 2). A `cf_clearance` obtained with Chrome N is rejected when replayed with a Chrome M TLS fingerprint.
+- **Profile/solver coherence:** the default profile's major browser version SHOULD match the Chrome version of the solver image shipped in Kaizen's reference `docker-compose` (Tier 1) and of the `-chromium` image (Tier 2). A `cf_clearance` obtained with Chrome N is often rejected when replayed with a Chrome M TLS fingerprint; `doctor --json` emits a warning when the profile and solver Chrome major versions differ.
 - **User-Agent policy:**
   - Impersonated scraping/download requests MUST send a genuine browser User-Agent matching the active TLS profile, or the solved domain User-Agent from the cookie jar. Never an application token.
   - Non-impersonated internal API requests (version check, AniList) use `kaizen-mangal/<version>`.
@@ -261,7 +261,7 @@ Triggers only on deterministic challenge signatures:
 
 #### 3. Two-Tier Solver Escalation + Circuit Breaker
 1. **Tier 1 — External Solver (FlareSolverr / Byparr):** active when `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_URL` is set. Persists returned cookies + `userAgent` to `PersistentCookieJar` and retries once.
-2. **Tier 2 — Built-in Headless Rod Fallback:** active when `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_FALLBACK=true` and the external solver is unset or unreachable. Navigates with stealth `go-rod`, waits for `cf_clearance`, persists cookies + UA, closes the browser and retries once.
+2. **Tier 2 — Built-in Headless Rod Fallback:** OFF by default (`false`), configurable via `network.cloudflare_solver_fallback` (`bool`, rendered automatically in Kaizen Settings) or `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_FALLBACK`. Active when enabled and the external solver is unset or unreachable. Navigates with stealth `go-rod`, waits for `cf_clearance`, persists cookies + UA, closes the browser and retries once. When enabled with no local browser and no `headless.cdp_url` available, fails with a clear error message and emits a warning in `doctor --json`. *(Note: Viper env vars always override TOML settings, so the Kaizen Docker image MUST NOT set `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_FALLBACK` unless explicitly intended.)*
 3. **Per-Domain Circuit Breaker (Kaizen Layer 1):** persisted in `<where.Cache()>/kaizen-mangal-cf-breaker.json` (`kaizen-mangal-cf-breaker.lock`). Opens for `15m` (configurable) after `2` consecutive solve failures per domain; resets on success.
 
 #### 4. Operational Requirements (documented, not enforced)
@@ -301,7 +301,7 @@ Triggers only on deterministic challenge signatures:
    - `rename` to the final path. On any failure, delete the temp file and return an error.
 3. **Fail closed in `downloader/download.go`:** zero pages, any failed page or any rejected page → error. Nothing is printed to stdout.
 4. **Race-free page downloader (`source/chapter.go:47-95`):** replace the shared `err`/`c.size` writes with `errgroup.Group` (first error cancels the rest) and atomic size accounting; validate `nil` pages and empty URLs before spawning goroutines.
-5. **`IsDownloaded` semantics:** with atomic writes, an existing final file is complete by construction for files written by `kaizen-mangal`. Legacy partial files written by upstream `mangal` are covered by Kaizen's existing CBZ validation (see Open Question Q4).
+5. **`IsDownloaded` semantics:** on top of atomic writes, `IsDownloaded` performs a cheap `archive/zip.OpenReader` EOCD/central-directory check for `.cbz`/`.zip` files (< 0.2 ms, does not decompress entries), automatically self-healing legacy corrupt archives left by upstream `mangal`.
 
 ---
 
@@ -318,7 +318,7 @@ Triggers only on deterministic challenge signatures:
 | Config directory (Linux/macOS) | `~/.config/mangal` | `~/.config/kaizen-mangal` |
 | Config directory (Windows) | `%APPDATA%\mangal` | `%APPDATA%\kaizen-mangal` |
 | Config file | `mangal.toml` | `kaizen-mangal.toml` |
-| **Sources directory** | `<config>/sources` | `<config>/sources`, **overridable via `KAIZEN_MANGAL_SOURCES_PATH`** *(shared on purpose, see below)* |
+| **Sources directory** | `<config>/sources` | `<config>/sources` *(isolated by default; opt-in sharing via `KAIZEN_MANGAL_SOURCES_PATH` only when explicitly set, e.g. in the Kaizen staging container)* |
 | Cache directory | `~/.cache/mangal` | `~/.cache/kaizen-mangal` |
 | Temp directory | `<tmp>/mangal` | `<tmp>/kaizen-mangal-<pid>-*` |
 | Env var prefix | `MANGAL_*` | `KAIZEN_MANGAL_*` *(never reads `MANGAL_*`)* |
@@ -329,7 +329,7 @@ Triggers only on deterministic challenge signatures:
 
 > **Implementation note on Viper env prefix:** `constant/meta.go` MUST define two separate constants — `AppName = "kaizen-mangal"` (paths, cobra `Use`, config filename) and `EnvPrefix = "KAIZEN_MANGAL"` (passed to `viper.SetEnvPrefix`) — because passing a hyphenated string to Viper produces invalid `KAIZEN-MANGAL_*` env vars.
 
-> **Why sources are shared:** Kaizen syncs Lua scrapers from GitHub into whatever `where -s` returns and manages `disabled/` subfolders there. If each core had its own sources directory, every A/B toggle in Staging would start with an empty or stale scraper set. Config, cache, cookies and breaker state are isolated; the sources directory is shared by pointing `KAIZEN_MANGAL_SOURCES_PATH` at upstream mangal's sources directory in the Kaizen container.
+> **Opt-in shared sources in Kaizen Staging:** By default, `kaizen-mangal` isolates its sources directory under `<config>/sources` (safe for local side-by-side testing). In the Kaizen Staging container, Kaizen syncs Lua scrapers into whatever `where -s` returns and manages `disabled/` subfolders there; setting `KAIZEN_MANGAL_SOURCES_PATH` explicitly opts into sharing upstream mangal's sources directory so A/B toggles do not start empty. Config, cache, cookies and breaker state always remain isolated.
 
 #### 2. Kaizen Integration Contract *(verified against `Kaizen/src/server/utils/mangal.ts`, `sources.ts`, `trpc/router/manga.ts`, `trpc/router/sources.ts`)*
 
@@ -408,34 +408,26 @@ Kaizen's `clearCache()` runs `where --cache` and deletes every entry whose name 
 
 | Command | Purpose | Output |
 |---|---|---|
-| `version --json` | Modular update compatibility checks | `{"app":"kaizen-mangal","version":"4.1.0","commit":"abc1234","os":"linux","arch":"arm64","contract_version":1}` |
+| `version --json` | Machine-readable version & contract checks (also prepares RFC 0002 modular updates) | `{"app":"kaizen-mangal","version":"1.0.0","commit":"abc1234","os":"linux","arch":"arm64","contract_version":1}` |
 | `sources validate <file.lua> --json` | Real validation for Kaizen's AI scraper generator (replaces the name-only check in `trpc/router/sources.ts:948`) | `{"valid":false,"name":"Foo","errors":[{"kind":"syntax","message":"...","line":12}],"missing_functions":["ChapterPages"],"uses_headless":false}`; exit code `0` valid / `1` invalid |
-| `doctor --json` | Health panel for Kaizen Web & iOS Settings | Browser resolution result, solver reachability, cookie jar/cache writability, active TLS profile, `contract_version` |
+| `doctor --json` | Diagnostics & health check | Browser resolution result, solver reachability, cookie jar/cache writability, active TLS profile, `contract_version`, and warnings when (a) profile and solver Chrome major versions differ or (b) `network.cloudflare_solver_fallback` is enabled with no browser/CDP URL available |
 
 `sources validate` compiles the file and loads it with `custom.LoadSource(path, validate=true)` (`provider/custom/loader.go:17-50`) in an isolated Lua state with no-op/stub `http` and `headless` modules preloaded, guaranteeing that stray top-level Lua code cannot accidentally perform network calls or spawn Chromium during syntax validation (normal scraper execution via `inline` always uses the real `http` and `headless` modules). It validates the exact file path given (not a name lookup), which removes the case-insensitive collision with built-ins.
 
-#### 7. Modular Core Updates (Decoupled from Kaizen Releases)
+#### 7. Deferred to RFC 0002: Modular Core Updates & Kaizen iOS App Integration
 
-Because `kaizen-mangal` lives in an independent repository, Kaizen MUST be able to update the scraper core (e.g. an urgent TLS/Cloudflare fix) without rebuilding or redeploying Kaizen itself.
+Decoupled in-place core updates (managed `/config/bin/kaizen-mangal` binary resolution, SHA-256 + `contract_version`-verified atomic swap, rollback, Web Settings core-updater panel, and **Kaizen iOS App** Server Admin integration) are deliberately moved out of this RFC into a dedicated **RFC 0002** so Stage 2 stays minimal and low-risk.
 
-- **Binary resolution order (in Kaizen):**
-  1. `KAIZEN_SCRAPER_BIN` (explicit override for local dev / staging toggle)
-  2. `/config/bin/kaizen-mangal` (managed binary on Kaizen's persistent `/config` volume)
-  3. `/usr/local/bin/kaizen-mangal` (bundled fallback binary baked into Kaizen's Docker image)
-- **Release channels:** `stable` (GitHub Releases from `main`) and `staging` (pre-releases from the active `feat/*` / `fix/*` branch, see Pillar G). Kaizen Staging tracks `staging`; Kaizen Production tracks `stable`.
-- **Verified atomic swap & rollback (Stage 2):**
-  - Kaizen downloads the matching `os/arch` release asset and `checksums.txt`, verifies SHA-256, writes `/config/bin/kaizen-mangal.new` and runs `kaizen-mangal.new version --json` to verify executability, architecture and `contract_version` compatibility.
-  - Copies the current `/config/bin/kaizen-mangal` to `.prev` and performs an atomic `rename()`. On Linux, in-flight workers continue on the old inode while new invocations pick up the new binary (no downtime, no `ETXTBSY`).
-  - Rollback swaps `.prev` back, or removes `/config/bin/kaizen-mangal` to fall back to the bundled image binary.
-  - **Cross-ecosystem parity (Web + iOS):** exposed via Kaizen Server Admin APIs (`status`, `update`, `rollback`, `doctor`) and surfaced consistently in Kaizen Web Settings and the Kaizen iOS App (Server Admin section), with EN/ES i18n parity.
+- **During RFC 0001 migration (Stage 2):** Kaizen selects the binary solely via `KAIZEN_SCRAPER_BIN` (defaulting to `mangal`, consistent with Section 6.F.3).
+- **Stage 1 prerequisites retained here:** `kaizen-mangal` still ships `version --json` (`contract_version: 1`) and SHA-256 `checksums.txt` on GitHub Releases so RFC 0002 can build directly on top without further CLI changes.
 
 #### 8. Kaizen-Side Migration Checklist (Stage 2)
-- [ ] `KAIZEN_SCRAPER_BIN` + binary resolution order in `mangalExec()`.
+- [ ] `KAIZEN_SCRAPER_BIN` toggle in `mangalExec()` (default remains `mangal` during migration).
 - [ ] `[kaizen-mangal:breaker-open]` handling (no retry, no `trackSourceFailure()`).
 - [ ] `40-config`: `kaizen-mangal` equivalents of the config copy, `formats.use=cbz` initialization and cache cleanup.
-- [ ] `docker/Dockerfile`: `KAIZEN_MANGAL_FORMATS_USE=cbz`, `KAIZEN_MANGAL_CONFIG_PATH`, `KAIZEN_MANGAL_CACHE_PATH`, `KAIZEN_MANGAL_SOURCES_PATH`.
+- [ ] `docker/Dockerfile`: `KAIZEN_MANGAL_FORMATS_USE=cbz`, `KAIZEN_MANGAL_CONFIG_PATH`, `KAIZEN_MANGAL_CACHE_PATH`, and opt-in `KAIZEN_MANGAL_SOURCES_PATH` (do **not** set `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_FALLBACK` in the image env, so users can toggle it via Kaizen Settings TOML).
 - [ ] AI scraper generator switches validation to `sources validate <file> --json`, falling back to the current check when the active binary is upstream `mangal`.
-- [ ] Built-in provider audit: count mangas/`MangaSource` rows bound to `Mangadex`, `Manganato`, `Manganelo`, `Mangapill` and surface them in the Kaizen UI so the owner can re-bind them to their own sources before Phase 9. Kaizen MUST NOT auto-migrate them to project-provided scrapers.
+- [ ] Built-in provider audit: count mangas/`MangaSource` rows bound to `Mangadex`, `Manganato`, `Manganelo`, `Mangapill` and surface them in the Kaizen UI so the owner can re-bind them to their own sources before Phase 8. Kaizen MUST NOT auto-migrate them to project-provided scrapers.
 - [ ] Optional: reference `docker-compose.yml` adds a commented-out solver service (FlareSolverr/Byparr) sharing the app's network namespace.
 
 ---
@@ -443,9 +435,9 @@ Because `kaizen-mangal` lives in an independent repository, Kaizen MUST be able 
 ### Pillar G: Go Toolchain, CI/CD & Two-Tier Releases
 
 1. **Isolated module rename commit (start of Phase 1):**
-   - Commit 1 (`chore: rename module to github.com/kaizen-Architecture/kaizen-mangal`): pure module path + import path rename, zero functional changes, original `LICENSE` and attribution untouched.
+   - Commit 1 (`chore: rename module to github.com/kaizen-architecture/kaizen-mangal`): pure lowercase module path + import path rename, zero functional changes, original `LICENSE` and attribution untouched.
 2. **Go toolchain & dependency verification:**
-   - Bump `go.mod` to the latest stable Go (`go 1.24`).
+   - Bump `go.mod` to the latest supported stable Go (`go 1.27`, verified `go1.27.4` on `go.dev/dl`).
    - CI (`.github/workflows/test.yml`) runs on `ubuntu-latest`, `macos-latest`, `windows-latest`:
      - `go mod verify`
      - `go mod tidy && git diff --exit-code go.mod go.sum`
@@ -453,6 +445,7 @@ Because `kaizen-mangal` lives in an independent repository, Kaizen MUST be able 
      - `go test -race ./...` (Linux/macOS) and `go test ./...` (Windows)
      - Cross-compile smoke check: `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./...` and `GOARCH=arm64`.
 3. **Two-tier releases (aligned with Kaizen Golden Rule 3):**
+   - **Versioning:** starts at **`v1.0.0`** (Go modules v4+ require a `/v4` module path suffix); `README.md` clearly states that `kaizen-mangal` derives from `metafates/mangal v4.0.6`.
    - **Staging:** every push to the active `feat/*` / `fix/*` branch publishes a GitHub **pre-release** (`staging-latest`, binaries + `checksums.txt`) and GHCR images `staging-latest` / `staging-latest-chromium`.
    - **Production:** merging the release PR into `main` runs **release-please** (Conventional Commits → CHANGELOG + SemVer tag), and the tag triggers **GoReleaser** for stable binaries and GHCR images `vX.Y.Z`, `latest`, `vX.Y.Z-chromium`, `latest-chromium`.
    - Kaizen's *Single Active PR Rule* applies: one active release branch at a time, because all non-`main` branches publish to the same `staging-latest` tag.
@@ -462,7 +455,7 @@ Because `kaizen-mangal` lives in an independent repository, Kaizen MUST be able 
      - **Default (minimal Alpine):** static binary + `ca-certificates`.
      - **Chromium variant (`-chromium`):** adds Alpine `chromium` + fonts + `KAIZEN_MANGAL_HEADLESS_BIN=/usr/bin/chromium-browser` + `KAIZEN_MANGAL_HEADLESS_ALLOW_DOWNLOAD=false`.
    - Remove all upstream `metafates` Docker Hub, Homebrew and Scoop targets.
-5. **Local development:** contributors need Go ≥ 1.24 locally, or can build with `docker run --rm -v ${PWD}:/src -w /src golang:1.24 go build ./...`.
+5. **Local development:** contributors need Go ≥ 1.27 locally, or can build with `docker run --rm -v ${PWD}:/src -w /src golang:1.27 go build ./...`.
 
 ---
 
@@ -479,7 +472,7 @@ All new keys use `bool`, `int` or `string` types so they render in Kaizen's Sett
 | `network.retry_after_max` | `KAIZEN_MANGAL_NETWORK_RETRY_AFTER_MAX` | int | `30` | Max seconds to honor a `Retry-After` header before failing |
 | `network.cloudflare_solver_url` | `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_URL` | string | `""` | External FlareSolverr / Byparr v1 endpoint |
 | `network.cloudflare_solver_timeout` | `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_TIMEOUT` | int | `60` | Solver timeout in seconds |
-| `network.cloudflare_solver_fallback` | `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_FALLBACK` | bool | `false` | Fall back to local/CDP headless browser when external solver is unset or fails |
+| `network.cloudflare_solver_fallback` | `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_FALLBACK` | bool | `false` | Fall back to local/CDP headless browser when external solver is unset or fails *(high RAM: ~300–500 MB per concurrent Chromium instance; leave unset in container env unless intended, as env vars override TOML)* |
 | `network.cloudflare_breaker_cooldown` | `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_BREAKER_COOLDOWN` | int | `900` | Circuit breaker cooldown in seconds after consecutive solve failures |
 | `headless.cdp_url` | `KAIZEN_MANGAL_HEADLESS_CDP_URL` | string | `""` | Remote Chrome DevTools Protocol WebSocket URL |
 | `headless.bin` | `KAIZEN_MANGAL_HEADLESS_BIN` | string | `""` | Explicit path to Chromium/Chrome binary |
@@ -511,8 +504,8 @@ Kaizen targets homelabs ranging from 2 GB NAS / Raspberry Pi hosts to multi-core
 - **`kaizen-mangal`:** no database. State lives in files under `where.Cache()` (cookie jar, breaker, rate-limit store) and `where.Config()` (TOML config). All are atomic, wipe-tolerant and rebuildable.
 - **Kaizen (Stage 2):**
   - No Prisma schema change is required for the A/B toggle (environment-driven).
-  - The modular update channel (`stable` / `staging`) and current core version, if persisted, MUST follow Kaizen's self-healing DDL rule (`CREATE TABLE IF NOT EXISTS` / additive columns in `settings-cache.ts`).
-  - The built-in provider migration (Phase 9) is a **data** migration of `Manga.source` / `MangaSource.source` values, executed only after the audit in Section 6.F.8 and reversible by keeping the old value in a log.
+  - The built-in provider removal (Phase 8) is preceded by the UI-surfaced audit in Section 6.F.8 so the server owner can re-bind any remaining rows to their own sources.
+  - Persistent metadata for modular core update channels/versions is deferred to **RFC 0002**.
 
 ---
 
@@ -561,24 +554,16 @@ stateDiagram-v2
 
 ## 11. UI/UX & i18n (Stage 2 only)
 
-`kaizen-mangal` itself has no UI changes (the TUI is out of scope). Kaizen surfaces:
+`kaizen-mangal` itself has no UI changes (the TUI is out of scope). In Stage 2, Kaizen surfaces:
 
-- **Web — Settings › Scraper Core panel** (Mantine, Indigo Glassmorphism): active binary and version, `contract_version`, release channel, Update / Rollback buttons, `doctor` health checks.
-- **iOS — Server Admin section:** same data and actions via the Server Admin API.
-- **New `config info -j` keys** (`network.*`, `headless.*`) appear automatically in the existing generic settings renderer.
+- **New `config info -j` keys** (`network.*`, `headless.*`) automatically in the existing generic Settings renderer (no frontend changes required).
+- **Breaker-open status message** when `[kaizen-mangal:breaker-open]` is returned.
+- *(The dedicated Scraper Core updater/rollback/doctor UI in Kaizen Web and Kaizen iOS App Server Admin is deferred to **RFC 0002**.)*
 
-Proposed i18n keys (`public/locales/en/settings.json` and `public/locales/es/settings.json`, plus iOS `Localizable.xcstrings`):
+Proposed i18n key (`public/locales/en/settings.json` and `public/locales/es/settings.json`):
 
 | Key | EN | ES |
 |---|---|---|
-| `scraperCore.title` | Scraper Core | Motor de scraping |
-| `scraperCore.version` | Version | Versión |
-| `scraperCore.channel` | Release channel | Canal de versiones |
-| `scraperCore.channel.stable` | Stable | Estable |
-| `scraperCore.channel.staging` | Staging | Staging |
-| `scraperCore.update` | Update core | Actualizar motor |
-| `scraperCore.rollback` | Roll back | Revertir |
-| `scraperCore.doctor` | Run diagnostics | Ejecutar diagnóstico |
 | `scraperCore.breakerOpen` | Source cooling down after repeated challenge failures | Fuente en pausa tras fallos de verificación repetidos |
 
 ---
@@ -589,18 +574,18 @@ Implementation is split into **two sequential stages** with a hard local validat
 
 ### Stage 1: `kaizen-mangal` Standalone & Local Side-by-Side Parity *(this repository only)*
 
-- [ ] **Phase 0: RFC Review**
-  - Collect comments on this PR, resolve Open Questions (Section 13), move status to `APPROVED`.
-  - Open a tracking issue `feat(core): Network resilience & modernization (RFC 0001)` with the phases below as checklists.
+- [x] **Phase 0: RFC Review**
+  - Collected comments on PR #1, resolved all Open Questions (Section 13), moved status to `APPROVED`.
+  - Open tracking issue `feat(core): Network resilience & modernization (RFC 0001)` with the phases below as checklists.
 - [ ] **Phase 1: Module Rename, Rebrand, Go Upgrade, CI & Baselines**
-  - Commit 1 (isolated): rename module path (no functional changes).
+  - Commit 1 (isolated): rename module path to `github.com/kaizen-architecture/kaizen-mangal` (no functional changes).
   - Capture **golden baselines before refactoring**: Lua API conformance tests and Kaizen contract tests, including file naming (Sections 14.3 and 14.4).
   - Internalize `mangal-lua-libs` into `internal/lualibs/` and remove `vendor/`.
-  - Coexistence rebrand (binary name, cobra `Use`, completions, `--version`, config/cache/temp dirs, `KAIZEN_MANGAL_*` prefix, `KAIZEN_MANGAL_CACHE_PATH`, `KAIZEN_MANGAL_SOURCES_PATH`, log/lockfile naming, `version/notify.go`).
+  - Coexistence rebrand (binary name, cobra `Use`, completions, `--version`, config/cache/temp dirs, `KAIZEN_MANGAL_*` prefix, `KAIZEN_MANGAL_CACHE_PATH`, opt-in `KAIZEN_MANGAL_SOURCES_PATH`, log/lockfile naming, `version/notify.go`, README noting lineage from `metafates/mangal v4.0.6`).
   - Clear default `installer.user` / `installer.repo`; move live-site tests behind `//go:build live`.
-  - Bump to Go 1.24; modernize `test.yml`.
+  - Bump to Go 1.27 (`go1.27.4`); modernize `test.yml`.
 - [ ] **Phase 2: Download Integrity (Inherited Defects)** — quick win, independent of networking
-  - Page validation, atomic CBZ/ZIP writer, fail-closed downloader, race-free `DownloadPages` (Pillar E).
+  - Page validation, atomic CBZ/ZIP writer, fail-closed downloader, `IsDownloaded` EOCD check, race-free `DownloadPages` (Pillar E).
   - Startup temp-dir race fix (`cmd/root.go`).
 - [ ] **Phase 3: Swappable `network.HTTPClient` & TLS Impersonation**
   - `network.HTTPClient`, `network/profile.go` (pinned default chosen here), `network/tls_client.go`.
@@ -613,42 +598,39 @@ Implementation is split into **two sequential stages** with a hard local validat
   - Register all new config keys and `KAIZEN_MANGAL_*` env vars.
 - [ ] **Phase 5: Headless Browser Overhaul & Fallback Integration**
   - Upgrade `go-rod/rod` + `go-rod/stealth`; isolated profiles, resolution order, container flags, timeouts, zero `Must*`, `close()`, `sync_cookies()`, `luaSource` teardown.
-  - Connect headless solver as Tier 2 fallback.
+  - Connect headless solver as Tier 2 fallback (with clear error when enabled and no browser/CDP URL is available).
 - [ ] **Phase 6: Kaizen-Facing Commands, Release Pipeline & Local A/B Gate**
-  - `version --json`, `sources validate --json`, `doctor --json`.
-  - `release-please` + GoReleaser, staging pre-releases, `Dockerfile` + `Dockerfile.chromium`, `checksums.txt`.
+  - `version --json` (`v1.0.0`, `contract_version: 1`), `sources validate --json`, `doctor --json` (including profile/solver Chrome major mismatch warning and fallback-without-browser warning).
+  - `release-please` + GoReleaser (`v1.0.0`), staging pre-releases, `Dockerfile` + `Dockerfile.chromium`, `checksums.txt`.
   - **Local side-by-side exit gate (Go / No-Go before Stage 2):**
     - Install `kaizen-mangal` locally next to upstream `mangal`.
     - **Parity check (working scrapers):** diff `sources list -r`, `where -s`, `inline ... -j`, `inline ... -d --format cbz` and `[NNNN]_<name>.cbz` file names; confirm zero config/cache/temp interference.
     - **Integrity check:** simulated challenge-as-image and interrupted downloads never produce a reported path.
     - **Resilience check (failing scrapers):** scrapers blocked by TLS/Cloudflare/headless issues on upstream `mangal` succeed on `kaizen-mangal`.
 
-### Stage 2: Kaizen Ecosystem Integration *(separate PRs in `Kaizen` & `Kaizen-iOS-App`, only after Stage 1 sign-off)*
+### Stage 2: Kaizen Integration *(separate PR in `Kaizen`, only after Stage 1 sign-off; modular core updater & iOS App deferred to RFC 0002)*
 
-- [ ] **Phase 7: Kaizen Server & Web Integration**
-  - Section 6.F.8 checklist (binary resolution, breaker-open handling, `40-config`, Dockerfile env, shared sources dir, `sources validate` in the AI generator, built-in provider audit).
-  - Server Admin API + Web Settings panel (EN/ES) for core status, channel, verified update, rollback and doctor.
+- [ ] **Phase 7: Kaizen Core Toggle & Staging Validation**
+  - Section 6.F.8 checklist (`KAIZEN_SCRAPER_BIN` toggle defaulting to `mangal`, breaker-open handling, `40-config`, Dockerfile env with opt-in `KAIZEN_MANGAL_SOURCES_PATH`, `sources validate` in the AI generator, built-in provider audit).
   - Ship both binaries in Kaizen's image; toggle `KAIZEN_SCRAPER_BIN=kaizen-mangal` on Kaizen Staging (`staging-latest`) and validate end to end.
-- [ ] **Phase 8: Kaizen iOS App Server Admin Integration**
-  - Reflect `network.*` / `headless.*` settings, core status, update/rollback and doctor results in the Server Admin view (EN/ES `Localizable.xcstrings` parity).
-- [ ] **Phase 9: Built-in Provider Removal & Upstream `mangal` Retirement**
+- [ ] **Phase 8: Built-in Provider Removal & Upstream `mangal` Retirement**
   - After the audit confirms zero mangas bound to `Mangadex`, `Manganato`, `Manganelo`, `Mangapill` (or the server owner has re-bound them to sources of their own), remove the built-in providers from `kaizen-mangal`. No replacement scrapers are provided by this project.
   - Remove upstream `mangal` from Kaizen's image and the `MANGAL_*` variables.
 
 ---
 
-## 13. Open Questions for Reviewers
+## 13. Resolved Decisions (Q1–Q8)
 
-| # | Question | Proposal |
+| # | Question | Resolution |
 |---|---|---|
-| Q1 | Which pinned TLS profile should be the default, and who bumps it? | Choose in Phase 3 to match the reference solver's Chrome major version; bump only via a `feat(network)` release note. |
-| Q2 | Built-in providers: remove in Phase 9, or keep permanently? | Remove in Phase 9. The project will not maintain replacement scrapers; users re-add sources with their own Lua scrapers. |
-| Q3 | Tier 2 headless fallback off by default — agreed? | Yes, because of RAM on low-end hosts; external solver or remote CDP preferred. |
-| Q4 | Should `IsDownloaded` also verify archive integrity (opening each CBZ), or rely on atomic writes + Kaizen's existing CBZ validation for legacy files? | Perform a cheap `archive/zip.OpenReader` EOCD/central-directory check in `IsDownloaded` for `.cbz`/`.zip` (< 0.2 ms, does not decompress entries) on top of atomic writes — automatically self-heals legacy corrupt CBZs written by upstream `mangal`. |
-| Q5 | Versioning: continue upstream numbering (`v4.1.0`) or restart (`v1.0.0`)? | `v4.1.0`, to make lineage and Kaizen compatibility obvious. |
-| Q6 | Module path casing: `github.com/kaizen-Architecture/kaizen-mangal` (exact org casing) vs all lowercase? | All lowercase (`github.com/kaizen-architecture/kaizen-mangal`): GitHub resolves it identically, avoids `!a` Go proxy encoding, and aligns `go.mod`, imports and GHCR casing. |
-| Q7 | Structured error line format (`[kaizen-mangal:error] {json}` on stderr) — sufficient for Kaizen and iOS? | Yes; versioned with `contract_version`. |
-| Q8 | Default `network.domain_min_interval_ms`: keep `0` (off) or ship a conservative value? | `0` in Stage 1 for parity; revisit with real data from Staging. |
+| Q1 | Default pinned TLS profile & version bump policy | **Resolved:** Choose in Phase 3 to match the reference solver's Chrome major version; bump deliberately via `feat(network)` release note. `doctor --json` emits a warning (not a `MUST`) when profile and solver Chrome majors differ. |
+| Q2 | Built-in providers: remove or keep permanently? | **Resolved:** Remove in Phase 8. The project maintains **no** replacement scrapers; users re-add sources with their own Lua scrapers. |
+| Q3 | Tier 2 headless fallback default & configuration | **Resolved:** OFF by default (`false`), fully configurable via `network.cloudflare_solver_fallback` (`bool`, rendered in Kaizen Settings). Includes clear error + `doctor` warning when enabled with no browser/CDP URL, RAM note in key description, and note that env vars override TOML (so Kaizen's image must not set this env var unless intended). |
+| Q4 | `IsDownloaded` integrity verification | **Resolved:** Cheap `archive/zip.OpenReader` EOCD/central-directory check in `IsDownloaded` for `.cbz`/`.zip` (< 0.2 ms) on top of atomic writes, self-healing legacy corrupt CBZs. |
+| Q5 | SemVer numbering | **Resolved:** Start at **`v1.0.0`** (avoids Go `/v4` module path suffix); state clearly in `README.md` that `kaizen-mangal` derives from `metafates/mangal v4.0.6`. |
+| Q6 | Go module path casing | **Resolved:** All lowercase (`github.com/kaizen-architecture/kaizen-mangal`), unified across Pillar A, Pillar G, `go.mod`, and GHCR. |
+| Q7 | Structured error line format | **Resolved:** Single `[kaizen-mangal:error] {json}` stderr line versioned with `contract_version`, plus a contract test verifying every error line against Kaizen's retryable-substring list. |
+| Q8 | Default `network.domain_min_interval_ms` | **Resolved:** `0` (disabled) in Stage 1 for parity; revisit with real Staging data. |
 
 ---
 
@@ -676,7 +658,7 @@ All CI tests run 100% offline using `net/http/httptest` servers and static fixtu
 4. **Kaizen contract tests (golden, offline):**
    - Run each command from the contract table against a local fixture provider and assert: `inline -j` JSON shape (including the `"mangal"` key and `chapters[]` fields), `config info -j` entry schema and allowed `type` values, `config get/set/write` round-trip, `where --cache` and `where -s` output, `sources list -r` format, and that `-d` prints the absolute `.cbz` path on stdout.
    - Default chapter file name matches `[NNNN]_<sanitized name>.cbz`, and `getChapterIndexFromFile`-style parsing recovers the index.
-   - Error-contract tests: simulated timeout, `503`, `429` and unsolved-challenge responses produce messages with the required keywords; an open breaker emits `[kaizen-mangal:breaker-open]` with exit code `75` and no retryable keyword; every failure emits exactly one valid `[kaizen-mangal:error]` JSON line.
+   - Error-contract tests: simulated timeout, `503`, `429` and unsolved-challenge responses produce messages with the required keywords; an open breaker emits `[kaizen-mangal:breaker-open]` with exit code `75` and no retryable keyword; every failure emits exactly one valid `[kaizen-mangal:error]` JSON line; **run every emitted error line (human + JSON) through Kaizen's exact retryable-substring list** to assert retryable errors match and non-retryable errors (`breaker_open`, `cf_challenge` on `403`, integrity failures) never accidentally trigger retries.
    - `sources validate`: valid scraper, syntax error (with line number), missing required function, file named like a built-in.
    - Cache-wipe test: delete every file in `where.Cache()` mid-run (cookie jar, breaker, rate-limit store, locks) and verify subsequent requests and downloads still succeed.
 5. **Cross-architecture build gate:**
