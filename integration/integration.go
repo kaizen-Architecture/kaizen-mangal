@@ -1,8 +1,8 @@
 package integration
 
 import (
-	"github.com/metafates/mangal/integration/anilist"
-	"github.com/metafates/mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/integration/anilist"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
 )
 
 // Integrator is the interface that wraps the basic integration methods.

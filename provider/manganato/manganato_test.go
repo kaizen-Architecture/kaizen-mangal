@@ -1,7 +1,9 @@
+//go:build live
+
 package manganato
 
 import (
-	"github.com/metafates/mangal/provider/generic"
+	"github.com/kaizen-architecture/kaizen-mangal/provider/generic"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )

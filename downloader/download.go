@@ -3,14 +3,14 @@ package downloader
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/metafates/mangal/color"
-	"github.com/metafates/mangal/converter"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/history"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/log"
-	"github.com/metafates/mangal/source"
-	"github.com/metafates/mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/converter"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/history"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/log"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
 	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
@@ -46,6 +46,12 @@ func Download(chapter *source.Chapter, progress func(string)) (string, error) {
 		return "", err
 	}
 	log.Info("found " + fmt.Sprintf("%d", len(pages)) + " pages")
+	if len(pages) == 0 {
+		err = fmt.Errorf("no pages found for chapter %q", chapter.Name)
+		log.Error(err)
+		return "", err
+	}
+	chapter.Pages = pages
 
 	err = chapter.DownloadPages(false, progress)
 	if err != nil {

@@ -426,7 +426,10 @@ Decoupled in-place core updates (managed `/config/bin/kaizen-mangal` binary reso
 - [ ] `[kaizen-mangal:breaker-open]` handling (no retry, no `trackSourceFailure()`).
 - [ ] `40-config`: `kaizen-mangal` equivalents of the config copy, `formats.use=cbz` initialization and cache cleanup.
 - [ ] `docker/Dockerfile`: `KAIZEN_MANGAL_FORMATS_USE=cbz`, `KAIZEN_MANGAL_CONFIG_PATH`, `KAIZEN_MANGAL_CACHE_PATH`, and opt-in `KAIZEN_MANGAL_SOURCES_PATH` (do **not** set `KAIZEN_MANGAL_NETWORK_CLOUDFLARE_SOLVER_FALLBACK` in the image env, so users can toggle it via Kaizen Settings TOML).
+- [ ] **Temporary `Settings -> Labs` gradual migration UI:** display both core versions/health (`version --json`, `doctor --json`), allow selecting the default core for new manga, and allow migrating individual manga, multi-selected manga, entire sources, or all manga between `mangal` and `kaizen-mangal` with 1-click rollback (removed in Phase 8 once migration is complete).
 - [ ] AI scraper generator switches validation to `sources validate <file> --json`, falling back to the current check when the active binary is upstream `mangal`.
+- [ ] **AI Gateway master prompt update (Cloudflare Worker):** update the scraper-generation prompt to leverage `kaizen-mangal`'s resilient `http.client()` (built-in TLS impersonation, shared persistent cookie jar, automatic challenge handling) and safe `headless` helpers (`browser:sync_cookies()`, `browser:close()`, `page:close()`, `page:cookies()` with backward-compatible guards during transition), prohibiting non-existent methods.
+- [ ] **External Lua scraper repositories (outside this repo):** audit and update user/community Lua scraper repositories (e.g. re-testing previously incompatible headless scrapers with `sources validate --json` and `kaizen-mangal`).
 - [ ] Built-in provider audit: count mangas/`MangaSource` rows bound to `Mangadex`, `Manganato`, `Manganelo`, `Mangapill` and surface them in the Kaizen UI so the owner can re-bind them to their own sources before Phase 8. Kaizen MUST NOT auto-migrate them to project-provided scrapers.
 - [ ] Optional: reference `docker-compose.yml` adds a commented-out solver service (FlareSolverr/Byparr) sharing the app's network namespace.
 
@@ -577,29 +580,29 @@ Implementation is split into **two sequential stages** with a hard local validat
 - [x] **Phase 0: RFC Review**
   - Collected comments on PR #1, resolved all Open Questions (Section 13), moved status to `APPROVED`.
   - Open tracking issue `feat(core): Network resilience & modernization (RFC 0001)` with the phases below as checklists.
-- [ ] **Phase 1: Module Rename, Rebrand, Go Upgrade, CI & Baselines**
+- [x] **Phase 1: Module Rename, Rebrand, Go Upgrade, CI & Baselines**
   - Commit 1 (isolated): rename module path to `github.com/kaizen-architecture/kaizen-mangal` (no functional changes).
   - Capture **golden baselines before refactoring**: Lua API conformance tests and Kaizen contract tests, including file naming (Sections 14.3 and 14.4).
   - Internalize `mangal-lua-libs` into `internal/lualibs/` and remove `vendor/`.
   - Coexistence rebrand (binary name, cobra `Use`, completions, `--version`, config/cache/temp dirs, `KAIZEN_MANGAL_*` prefix, `KAIZEN_MANGAL_CACHE_PATH`, opt-in `KAIZEN_MANGAL_SOURCES_PATH`, log/lockfile naming, `version/notify.go`, README noting lineage from `metafates/mangal v4.0.6`).
   - Clear default `installer.user` / `installer.repo`; move live-site tests behind `//go:build live`.
   - Bump to Go 1.27 (`go1.27.4`); modernize `test.yml`.
-- [ ] **Phase 2: Download Integrity (Inherited Defects)** — quick win, independent of networking
+- [x] **Phase 2: Download Integrity (Inherited Defects)** — quick win, independent of networking
   - Page validation, atomic CBZ/ZIP writer, fail-closed downloader, `IsDownloaded` EOCD check, race-free `DownloadPages` (Pillar E).
   - Startup temp-dir race fix (`cmd/root.go`).
-- [ ] **Phase 3: Swappable `network.HTTPClient` & TLS Impersonation**
+- [x] **Phase 3: Swappable `network.HTTPClient` & TLS Impersonation**
   - `network.HTTPClient`, `network/profile.go` (pinned default chosen here), `network/tls_client.go`.
   - Normalize transient errors per the Error Message Contract, including the structured `[kaizen-mangal:error]` line.
   - `Retry-After`, per-domain spacing and per-host concurrency.
   - Wire `network.Client`, `provider/generic` (Colly + `Host` header fix), `source/page.go` and `internal/lualibs/http`.
-- [ ] **Phase 4: Persistent Cookie Jar & Cloudflare Solver**
+- [x] **Phase 4: Persistent Cookie Jar & Cloudflare Solver**
   - File-locked, wipe-tolerant `PersistentCookieJar` with atomic writes, `0600` permissions and domain UA binding.
   - Challenge detector, FlareSolverr/Byparr client and per-domain circuit breaker (`[kaizen-mangal:breaker-open]` + exit code `75`).
   - Register all new config keys and `KAIZEN_MANGAL_*` env vars.
-- [ ] **Phase 5: Headless Browser Overhaul & Fallback Integration**
+- [x] **Phase 5: Headless Browser Overhaul & Fallback Integration**
   - Upgrade `go-rod/rod` + `go-rod/stealth`; isolated profiles, resolution order, container flags, timeouts, zero `Must*`, `close()`, `sync_cookies()`, `luaSource` teardown.
   - Connect headless solver as Tier 2 fallback (with clear error when enabled and no browser/CDP URL is available).
-- [ ] **Phase 6: Kaizen-Facing Commands, Release Pipeline & Local A/B Gate**
+- [x] **Phase 6: Kaizen-Facing Commands, Release Pipeline & Local A/B Gate**
   - `version --json` (`v1.0.0`, `contract_version: 1`), `sources validate --json`, `doctor --json` (including profile/solver Chrome major mismatch warning and fallback-without-browser warning).
   - `release-please` + GoReleaser (`v1.0.0`), staging pre-releases, `Dockerfile` + `Dockerfile.chromium`, `checksums.txt`.
   - **Local side-by-side exit gate (Go / No-Go before Stage 2):**

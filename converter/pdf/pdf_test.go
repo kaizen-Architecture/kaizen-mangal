@@ -2,11 +2,11 @@ package pdf
 
 import (
 	"bytes"
-	"github.com/metafates/mangal/config"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/config"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
 	"github.com/samber/lo"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"

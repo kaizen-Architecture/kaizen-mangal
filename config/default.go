@@ -3,10 +3,10 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/metafates/mangal/color"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
 	"github.com/samber/lo"
 	"github.com/spf13/viper"
 	"reflect"
@@ -101,7 +101,7 @@ func (f *Field) Pretty() string {
 
 func (f *Field) Env() string {
 	env := strings.ToUpper(EnvKeyReplacer.Replace(f.Key))
-	appPrefix := strings.ToUpper(constant.Mangal + "_")
+	appPrefix := strings.ToUpper(constant.EnvPrefix + "_")
 
 	if strings.HasPrefix(env, appPrefix) {
 		return env
@@ -315,12 +315,12 @@ Use "any" to show all languages`,
 	},
 	{
 		key.InstallerUser,
-		"metafates",
+		"",
 		"Custom scrapers repository owner",
 	},
 	{
 		key.InstallerRepo,
-		"mangal-scrapers",
+		"",
 		"Custom scrapers repository name",
 	},
 	{
@@ -408,6 +408,71 @@ panic, fatal, error, warn, info, debug, trace`,
 		key.CliColored,
 		true,
 		"Use colors in CLI help page",
+	},
+	{
+		key.NetworkImpersonate,
+		"chrome_133",
+		"Pinned TLS/H2 browser fingerprint profile (chrome_133, chrome_131, firefox_135, firefox_133, safari_16_0, none)",
+	},
+	{
+		key.NetworkDomainMinIntervalMs,
+		0,
+		"Minimum spacing in milliseconds between requests to the same domain across processes (0 = disabled)",
+	},
+	{
+		key.NetworkDomainMaxConcurrency,
+		8,
+		"Maximum parallel requests per host",
+	},
+	{
+		key.NetworkRetryAfterMax,
+		30,
+		"Maximum seconds to honor a Retry-After header on 429/503 before returning the error",
+	},
+	{
+		key.NetworkCookieJarPath,
+		"",
+		"Path to shared persistent cookie jar JSON (empty uses <cache>/kaizen-mangal-cookies.json)",
+	},
+	{
+		key.NetworkCloudflareSolverURL,
+		"",
+		"External FlareSolverr / Byparr v1 endpoint URL (e.g. http://flaresolverr:8191/v1)",
+	},
+	{
+		key.NetworkCloudflareSolverTimeout,
+		60,
+		"Cloudflare solver timeout in seconds",
+	},
+	{
+		key.NetworkCloudflareSolverFallback,
+		false,
+		"Fall back to local/CDP headless browser when external solver is unset or fails (high RAM: ~300-500 MB per concurrent Chromium instance)",
+	},
+	{
+		key.NetworkCloudflareBreakerCooldown,
+		900,
+		"Per-domain circuit breaker cooldown in seconds after consecutive challenge solve failures",
+	},
+	{
+		key.HeadlessCDPURL,
+		"",
+		"Remote Chrome DevTools Protocol WebSocket URL (e.g. ws://browserless:3000)",
+	},
+	{
+		key.HeadlessBin,
+		"",
+		"Explicit path to Chromium or Google Chrome executable",
+	},
+	{
+		key.HeadlessTimeout,
+		30,
+		"Default per-operation timeout in seconds for headless browser actions",
+	},
+	{
+		key.HeadlessAllowDownload,
+		true,
+		"Allow Rod managed Chromium download if no local browser or CDP URL is available (false in Docker images)",
 	},
 }
 

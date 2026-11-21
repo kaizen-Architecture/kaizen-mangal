@@ -1,16 +1,18 @@
 package cmd
 
 import (
-	"github.com/metafates/mangal/color"
-	"github.com/metafates/mangal/style"
-	"github.com/metafates/mangal/version"
-	"github.com/samber/lo"
+	"encoding/json"
 	"os"
 	"runtime"
 	"strings"
 	"text/template"
 
-	"github.com/metafates/mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/network"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/version"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
 
@@ -18,13 +20,36 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	versionCmd.SetOut(os.Stdout)
 	versionCmd.Flags().BoolP("short", "s", false, "print short version")
+	versionCmd.Flags().BoolP("json", "j", false, "print version as JSON")
 }
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of mangal",
-	Long:  `All software has versions. This is mangal's`,
+	Short: "Print the version number of kaizen-mangal",
+	Long:  `All software has versions. This is kaizen-mangal's`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if lo.Must(cmd.Flags().GetBool("json")) {
+			payload := struct {
+				App             string `json:"app"`
+				Version         string `json:"version"`
+				Commit          string `json:"commit"`
+				OS              string `json:"os"`
+				Arch            string `json:"arch"`
+				ContractVersion int    `json:"contract_version"`
+			}{
+				App:             constant.Mangal,
+				Version:         constant.Version,
+				Commit:          strings.TrimSpace(constant.Revision),
+				OS:              runtime.GOOS,
+				Arch:            runtime.GOARCH,
+				ContractVersion: network.ContractVersion,
+			}
+			b, err := json.Marshal(payload)
+			handleErr(err)
+			cmd.Println(string(b))
+			return
+		}
+
 		if lo.Must(cmd.Flags().GetBool("short")) {
 			cmd.Println(constant.Version)
 			return

@@ -1,14 +1,15 @@
 package generic
 
 import (
-	"github.com/PuerkitoBio/goquery"
-	"github.com/gocolly/colly/v2"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/source"
-	"github.com/metafates/mangal/where"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/gocolly/colly/v2"
+	"github.com/kaizen-architecture/kaizen-mangal/network"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/where"
 )
 
 // New generates a new scraper with given configuration
@@ -28,14 +29,15 @@ func New(conf *Configuration) source.Source {
 
 	baseCollector := colly.NewCollector(collectorOptions...)
 	baseCollector.SetRequestTimeout(20 * time.Second)
+	baseCollector.WithTransport(network.DefaultTransport())
+	baseCollector.SetCookieJar(network.SharedCookieJar())
 
 	mangasCollector := baseCollector.Clone()
 	mangasCollector.OnRequest(func(r *colly.Request) {
 		r.Headers.Set("Referer", "https://google.com")
-		r.Headers.Set("accept-language", "en-US")
+		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
 		r.Headers.Set("Accept", "text/html")
-		r.Headers.Set("Host", s.config.BaseURL)
-		r.Headers.Set("User-Agent", constant.UserAgent)
+		r.Headers.Set("User-Agent", network.ActiveProfile().UserAgent)
 	})
 
 	// Get mangas
@@ -70,10 +72,9 @@ func New(conf *Configuration) source.Source {
 	chaptersCollector := baseCollector.Clone()
 	chaptersCollector.OnRequest(func(r *colly.Request) {
 		r.Headers.Set("Referer", r.Ctx.GetAny("manga").(*source.Manga).URL)
-		r.Headers.Set("accept-language", "en-US")
+		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
 		r.Headers.Set("Accept", "text/html")
-		r.Headers.Set("Host", s.config.BaseURL)
-		r.Headers.Set("User-Agent", constant.UserAgent)
+		r.Headers.Set("User-Agent", network.ActiveProfile().UserAgent)
 	})
 
 	// Get chapters
@@ -109,9 +110,9 @@ func New(conf *Configuration) source.Source {
 	pagesCollector := baseCollector.Clone()
 	pagesCollector.OnRequest(func(r *colly.Request) {
 		r.Headers.Set("Referer", r.Ctx.GetAny("chapter").(*source.Chapter).URL)
-		r.Headers.Set("accept-language", "en-US")
+		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
 		r.Headers.Set("Accept", "text/html")
-		r.Headers.Set("User-Agent", constant.UserAgent)
+		r.Headers.Set("User-Agent", network.ActiveProfile().UserAgent)
 	})
 
 	// Get pages

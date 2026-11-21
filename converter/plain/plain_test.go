@@ -2,9 +2,9 @@ package plain
 
 import (
 	"bytes"
-	"github.com/metafates/mangal/config"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/config"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
 	"github.com/samber/lo"
 	. "github.com/smartystreets/goconvey/convey"
 	"io/fs"

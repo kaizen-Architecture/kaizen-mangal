@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/log"
-	"github.com/metafates/mangal/network"
-	"github.com/metafates/mangal/util"
 	_ "image/gif"
 	"io"
 	"net/http"
+	"net/url"
+
+	"github.com/kaizen-architecture/kaizen-mangal/log"
+	"github.com/kaizen-architecture/kaizen-mangal/network"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
 )
 
 // Page represents a page in a chapter
@@ -36,16 +37,19 @@ func (p *Page) request() (*http.Request, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Referer", p.Chapter.URL)
-	req.Header.Set("User-Agent", constant.UserAgent)
+	if p.Chapter != nil && p.Chapter.URL != "" {
+		req.Header.Set("Referer", p.Chapter.URL)
+	}
+	req.Header.Set("User-Agent", network.ActiveProfile().UserAgent)
 	return req, nil
 }
 
-// Download Page contents.
+// Download Page contents and validate image integrity (RFC 0001 Pillar E.1).
 func (p *Page) Download() error {
 	if p.URL == "" {
-		log.Warnf("Page #%d has no URL", p.Index)
-		return nil
+		err := fmt.Errorf("page #%d has empty URL", p.Index)
+		log.Error(err)
+		return err
 	}
 
 	log.Tracef("Downloading page #%d (%s)", p.Index, p.URL)
@@ -63,14 +67,19 @@ func (p *Page) Download() error {
 
 	defer util.Ignore(resp.Body.Close)
 
+	host := ""
+	if parsed, parseErr := url.Parse(p.URL); parseErr == nil {
+		host = parsed.Host
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		err = errors.New("http error: " + resp.Status)
+		err = fmt.Errorf("http error from %s: %s", host, resp.Status)
 		log.Error(err)
 		return err
 	}
 
 	if resp.ContentLength == 0 {
-		err = errors.New("http error: nothing was returned")
+		err = fmt.Errorf("http error from %s: nothing was returned", host)
 		log.Error(err)
 		return err
 	}
@@ -94,6 +103,18 @@ func (p *Page) Download() error {
 		return err
 	}
 
+	detectedExt, valErr := ValidateImageBytes(buf, resp.Header.Get("Content-Type"))
+	if valErr != nil {
+		if isCloudflareLikePayload(resp.Header, buf) {
+			err = fmt.Errorf("invalid page #%d from %s (cloudflare challenge): %w", p.Index, host, valErr)
+		} else {
+			err = fmt.Errorf("invalid page #%d from %s: %w", p.Index, host, valErr)
+		}
+		log.Error(err)
+		return err
+	}
+
+	p.Extension = normalizePageExtension(p.Extension, detectedExt)
 	p.Contents = bytes.NewBuffer(buf)
 	p.Size = uint64(util.Max(contentLength, 0))
 

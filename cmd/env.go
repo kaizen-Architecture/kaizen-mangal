@@ -1,16 +1,18 @@
 package cmd
 
 import (
-	"github.com/metafates/mangal/color"
-	"github.com/metafates/mangal/config"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/style"
-	"github.com/metafates/mangal/where"
+	"os"
+	"strings"
+
+	"github.com/kaizen-architecture/kaizen-mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/config"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/version"
+	"github.com/kaizen-architecture/kaizen-mangal/where"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
-	"os"
-	"strings"
 )
 
 func init() {
@@ -29,12 +31,23 @@ var envCmd = &cobra.Command{
 		setOnly := lo.Must(cmd.Flags().GetBool("set-only"))
 		unsetOnly := lo.Must(cmd.Flags().GetBool("unset-only"))
 
-		config.EnvExposed = append(config.EnvExposed, where.EnvConfigPath)
-		slices.Sort(config.EnvExposed)
+		extraEnvs := map[string]bool{
+			where.EnvConfigPath:           true,
+			where.EnvCachePath:            true,
+			where.EnvSourcesPath:          true,
+			version.EnvDisableUpdateCheck: true,
+		}
+
+		envs := make([]string, 0, len(config.EnvExposed)+len(extraEnvs))
 		for _, env := range config.EnvExposed {
-			if env != where.EnvConfigPath {
-				env = strings.ToUpper(constant.Mangal + "_" + config.EnvKeyReplacer.Replace(env))
-			}
+			envs = append(envs, strings.ToUpper(constant.EnvPrefix+"_"+config.EnvKeyReplacer.Replace(env)))
+		}
+		for env := range extraEnvs {
+			envs = append(envs, env)
+		}
+
+		slices.Sort(envs)
+		for _, env := range envs {
 			value := os.Getenv(env)
 			present := value != ""
 

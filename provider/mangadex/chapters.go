@@ -3,8 +3,8 @@ package mangadex
 import (
 	"fmt"
 	"github.com/darylhjd/mangodex"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
 	"net/url"
