@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -50,6 +51,7 @@ func TestTLSClientInterfaceAndFallback(t *testing.T) {
 				Profile:           profileName,
 				Timeout:           10 * time.Second,
 				DisablePoliteness: true,
+				Jar:               NewPersistentCookieJar(filepath.Join(t.TempDir(), "cookies.json")),
 			})
 			if err != nil {
 				t.Fatalf("NewClient(%s) failed: %v", profileName, err)

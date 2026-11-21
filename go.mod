@@ -12,7 +12,6 @@ require (
 	github.com/charmbracelet/bubbles v0.14.0
 	github.com/charmbracelet/bubbletea v0.23.1
 	github.com/charmbracelet/lipgloss v0.6.0
-	github.com/darylhjd/mangodex v0.0.0-20211231093527-e4a91c518fa0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-rod/rod v0.116.2
 	github.com/go-rod/stealth v0.4.9
