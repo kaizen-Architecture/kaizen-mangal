@@ -73,9 +73,15 @@ func FormatErrorLine(err error) string {
 
 // ExitCodeFor returns the process exit code for err (75 for breaker-open, 1 otherwise).
 func ExitCodeFor(err error) int {
+	if err == nil {
+		return 0
+	}
 	var se *StructuredError
 	if errors.As(err, &se) && se.ExitCode != 0 {
 		return se.ExitCode
+	}
+	if strings.Contains(err.Error(), BreakerOpenMarker) {
+		return ExitCodeBreakerOpen
 	}
 	return 1
 }
