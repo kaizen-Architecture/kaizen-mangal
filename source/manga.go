@@ -2,12 +2,12 @@ package source
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/anilist"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/log"
-	"github.com/metafates/mangal/util"
-	"github.com/metafates/mangal/where"
+	"github.com/kaizen-architecture/kaizen-mangal/anilist"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/log"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
+	"github.com/kaizen-architecture/kaizen-mangal/where"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/spf13/viper"

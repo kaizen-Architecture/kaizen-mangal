@@ -1,9 +1,9 @@
 package update
 
 import (
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/log"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/log"
 	"os"
 	"path/filepath"
 )

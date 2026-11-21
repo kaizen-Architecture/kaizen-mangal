@@ -2,24 +2,26 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	cc "github.com/ivanpirog/coloredcobra"
-	"github.com/metafates/mangal/color"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/converter"
-	"github.com/metafates/mangal/icon"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/log"
-	"github.com/metafates/mangal/provider"
-	"github.com/metafates/mangal/style"
-	"github.com/metafates/mangal/tui"
-	"github.com/metafates/mangal/util"
-	"github.com/metafates/mangal/version"
-	"github.com/metafates/mangal/where"
+	"github.com/kaizen-architecture/kaizen-mangal/color"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/converter"
+	"github.com/kaizen-architecture/kaizen-mangal/icon"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/log"
+	"github.com/kaizen-architecture/kaizen-mangal/network"
+	"github.com/kaizen-architecture/kaizen-mangal/provider"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/tui"
+	"github.com/kaizen-architecture/kaizen-mangal/version"
+	"github.com/kaizen-architecture/kaizen-mangal/where"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"strings"
 )
 
 func init() {
@@ -64,10 +66,8 @@ func init() {
 		version.Notify()
 	})
 
-	// Clear temporary files on startup
-	go func() {
-		_ = util.Delete(where.Temp())
-	}()
+	// Clean stale temporary directories (>1h old) from previous processes without touching active workers.
+	go where.CleanStaleTemp(time.Hour)
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -119,6 +119,9 @@ func handleErr(err error) {
 	if err != nil {
 		log.Error(err)
 		_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", icon.Get(icon.Fail), strings.Trim(err.Error(), " \n"))
-		os.Exit(1)
+		if line := network.FormatErrorLine(err); line != "" {
+			_, _ = fmt.Fprintln(os.Stderr, line)
+		}
+		os.Exit(network.ExitCodeFor(err))
 	}
 }

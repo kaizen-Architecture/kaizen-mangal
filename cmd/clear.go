@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/icon"
-	"github.com/metafates/mangal/util"
-	"github.com/metafates/mangal/where"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/icon"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
+	"github.com/kaizen-architecture/kaizen-mangal/where"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/spf13/cobra"

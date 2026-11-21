@@ -2,8 +2,8 @@ package mini
 
 import (
 	"errors"
-	"github.com/metafates/mangal/source"
-	"github.com/metafates/mangal/util"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
 	"github.com/samber/lo"
 	"os"
 )

@@ -1,6 +1,6 @@
 package custom
 
-import "github.com/metafates/mangal/constant"
+import "github.com/kaizen-architecture/kaizen-mangal/constant"
 
 var mustHave = []string{
 	constant.SearchMangaFn,

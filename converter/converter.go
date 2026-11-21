@@ -2,12 +2,12 @@ package converter
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/converter/cbz"
-	"github.com/metafates/mangal/converter/pdf"
-	"github.com/metafates/mangal/converter/plain"
-	"github.com/metafates/mangal/converter/zip"
-	"github.com/metafates/mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/converter/cbz"
+	"github.com/kaizen-architecture/kaizen-mangal/converter/pdf"
+	"github.com/kaizen-architecture/kaizen-mangal/converter/plain"
+	"github.com/kaizen-architecture/kaizen-mangal/converter/zip"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
 	"github.com/samber/lo"
 	"strings"
 )

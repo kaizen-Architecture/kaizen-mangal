@@ -2,8 +2,8 @@ package util
 
 import (
 	"fmt"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
 	"github.com/samber/lo"
 	"golang.org/x/exp/constraints"
 	"golang.org/x/term"
@@ -22,9 +22,9 @@ func PadZero(s string, l int) string {
 
 // replacers is a list of regexp.Regexp pairs that will be used to sanitize filenames.
 var replacers = []lo.Tuple2[*regexp.Regexp, string]{
-	{regexp.MustCompile(`[\\/<>:;"'|?!*{}#%&^+,~\s]`), "_"},
-	{regexp.MustCompile(`__+`), "_"},
-	{regexp.MustCompile(`^[_\-.]+|[_\-.]+$`), ""},
+	{A: regexp.MustCompile(`[\\/<>:;"'|?!*{}#%&^+,~\s]`), B: "_"},
+	{A: regexp.MustCompile(`__+`), B: "_"},
+	{A: regexp.MustCompile(`^[_\-.]+|[_\-.]+$`), B: ""},
 }
 
 // SanitizeFilename will remove all invalid characters from a path.

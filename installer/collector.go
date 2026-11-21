@@ -1,18 +1,23 @@
 package installer
 
 import (
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/util"
+	"errors"
+	"path/filepath"
+
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
 	"github.com/samber/lo"
 	"github.com/spf13/viper"
-	"path/filepath"
 )
 
 var collector *githubFilesCollector
 
-// Scrapers gets available scrapers from GitHub repo.
-// See https://github.com/metafates/mangal-scrapers
+// Scrapers gets available scrapers from a user-configured GitHub repo.
 func Scrapers() ([]*Scraper, error) {
+	if viper.GetString(key.InstallerUser) == "" || viper.GetString(key.InstallerRepo) == "" {
+		return nil, errors.New("installer.user and installer.repo are not configured")
+	}
+
 	if collector == nil {
 		setupCollector()
 	}

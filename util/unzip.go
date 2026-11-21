@@ -3,7 +3,7 @@ package util
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/metafates/mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
 	"io"
 	"os"
 	"path/filepath"

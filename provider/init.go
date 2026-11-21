@@ -1,12 +1,12 @@
 package provider
 
 import (
-	"github.com/metafates/mangal/provider/generic"
-	"github.com/metafates/mangal/provider/mangadex"
-	"github.com/metafates/mangal/provider/manganato"
-	"github.com/metafates/mangal/provider/manganelo"
-	"github.com/metafates/mangal/provider/mangapill"
-	"github.com/metafates/mangal/source"
+	"github.com/kaizen-architecture/kaizen-mangal/provider/generic"
+	"github.com/kaizen-architecture/kaizen-mangal/provider/mangadex"
+	"github.com/kaizen-architecture/kaizen-mangal/provider/manganato"
+	"github.com/kaizen-architecture/kaizen-mangal/provider/manganelo"
+	"github.com/kaizen-architecture/kaizen-mangal/provider/mangapill"
+	"github.com/kaizen-architecture/kaizen-mangal/source"
 )
 
 const CustomProviderExtension = ".lua"

@@ -1,0 +1,137 @@
+name: Staging Pre-Release
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+  workflow_dispatch:
+
+concurrency:
+  group: staging-release
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  binaries:
+    name: Build & Publish Staging Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build static archives (CGO_ENABLED=0)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BUILT_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          VERSION="staging-${SHORT_SHA}"
+          LDFLAGS="-s -w -X 'github.com/kaizen-architecture/kaizen-mangal/constant.Version=${VERSION}' -X 'github.com/kaizen-architecture/kaizen-mangal/constant.BuiltAt=${BUILT_AT}' -X 'github.com/kaizen-architecture/kaizen-mangal/constant.BuiltBy=github-actions' -X 'github.com/kaizen-architecture/kaizen-mangal/constant.Revision=${SHORT_SHA}'"
+
+          targets=(
+            "windows amd64 .exe zip"
+            "linux amd64 '' tar.gz"
+            "linux arm64 '' tar.gz"
+            "darwin amd64 '' tar.gz"
+            "darwin arm64 '' tar.gz"
+          )
+
+          for entry in "${targets[@]}"; do
+            read -r goos goarch ext fmt <<< "$entry"
+            ext=${ext//\'/}
+            stage="dist/stage_${goos}_${goarch}"
+            mkdir -p "${stage}/completions"
+            CGO_ENABLED=0 GOOS="${goos}" GOARCH="${goarch}" go build -trimpath -ldflags="${LDFLAGS}" -o "${stage}/kaizen-mangal${ext}" .
+            cp LICENSE README.md "${stage}/"
+            cp completions/kaizen-mangal.* "${stage}/completions/"
+
+            archive="kaizen-mangal_staging_${goos}_${goarch}.${fmt}"
+            if [ "${fmt}" = "zip" ]; then
+              (cd "${stage}" && zip -r "../${archive}" .)
+            else
+              tar -C "${stage}" -czf "dist/${archive}" .
+            fi
+            rm -rf "${stage}"
+          done
+
+          (cd dist && sha256sum kaizen-mangal_staging_* > checksums.txt)
+          ls -lh dist/
+
+      - name: Publish floating staging-latest pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BRANCH="${GITHUB_REF_NAME}"
+
+          gh release delete staging-latest --yes 2>/dev/null || true
+          git tag -f staging-latest HEAD
+          git push -f origin staging-latest
+
+          gh release create staging-latest dist/* \
+            --prerelease \
+            --title "kaizen-mangal staging-latest (${SHORT_SHA})" \
+            --notes "Automated staging build from branch \`${BRANCH}\` (\`${SHORT_SHA}\`).
+
+          ### Windows quick install
+          Download \`kaizen-mangal_staging_windows_amd64.zip\`, extract \`kaizen-mangal.exe\` to \`%LOCALAPPDATA%\\Programs\\kaizen-mangal\\\` and add that folder to your User \`PATH\`.
+
+          Verify checksums with \`checksums.txt\` (SHA-256)."
+
+  docker:
+    name: Build & Push Multi-Arch GHCR Staging Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push minimal image (staging-latest)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/kaizen-architecture/kaizen-mangal:staging-latest
+          build-args: |
+            VERSION=staging-${{ github.sha }}
+            REVISION=${{ github.sha }}
+            BUILT_BY=github-actions
+
+      - name: Build & Push chromium image (staging-latest-chromium)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.chromium
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/kaizen-architecture/kaizen-mangal:staging-latest-chromium
+          build-args: |
+            VERSION=staging-${{ github.sha }}
+            REVISION=${{ github.sha }}
+            BUILT_BY=github-actions

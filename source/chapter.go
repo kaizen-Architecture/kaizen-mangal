@@ -1,20 +1,24 @@
 package source
 
 import (
+	"archive/zip"
+	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/metafates/mangal/constant"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/style"
-	"github.com/metafates/mangal/util"
-	"github.com/samber/mo"
-	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/style"
+	"github.com/kaizen-architecture/kaizen-mangal/util"
+	"github.com/samber/mo"
+	"github.com/spf13/viper"
 )
 
 // Chapter is a struct that represents a chapter of a manga.
@@ -44,8 +48,28 @@ func (c *Chapter) String() string {
 
 // DownloadPages downloads the Pages contents of the Chapter.
 // Pages needs to be set before calling this function.
-func (c *Chapter) DownloadPages(temp bool, progress func(string)) (err error) {
-	c.size = 0
+func (c *Chapter) DownloadPages(temp bool, progress func(string)) error {
+	if len(c.Pages) == 0 {
+		c.isDownloaded = mo.Some(false)
+		return errors.New("chapter has no pages, aborting download")
+	}
+
+	for i, page := range c.Pages {
+		if page == nil {
+			c.isDownloaded = mo.Some(false)
+			return fmt.Errorf("page #%d is nil, aborting download", i)
+		}
+		if page.URL == "" {
+			c.isDownloaded = mo.Some(false)
+			return fmt.Errorf("page #%d has empty URL, aborting download", page.Index)
+		}
+	}
+
+	atomic.StoreUint64(&c.size, 0)
+	if progress == nil {
+		progress = func(string) {}
+	}
+
 	status := func() string {
 		return fmt.Sprintf(
 			"Downloading %s %s",
@@ -54,44 +78,62 @@ func (c *Chapter) DownloadPages(temp bool, progress func(string)) (err error) {
 		)
 	}
 
-	progress(status())
-	wg := sync.WaitGroup{}
-	wg.Add(len(c.Pages))
+	var (
+		wg         sync.WaitGroup
+		errOnce    sync.Once
+		firstErr   error
+		aborted    atomic.Bool
+		progressMu sync.Mutex
+	)
+
+	reportProgress := func() {
+		progressMu.Lock()
+		progress(status())
+		progressMu.Unlock()
+	}
+
+	reportProgress()
+	async := viper.GetBool(key.DownloaderAsync)
 
 	for _, page := range c.Pages {
-		if page == nil {
-			return fmt.Errorf("page #%d is empty, aborting download", page.Index)
-		}
+		page := page
+		wg.Add(1)
 
-		d := func(page *Page) {
+		d := func() {
 			defer wg.Done()
 
-			// if at any point, an error is encountered, stop downloading other pages
-			if err != nil {
+			if aborted.Load() {
 				return
 			}
 
-			err = page.Download()
-			c.size += page.Size
-			progress(status())
+			if err := page.Download(); err != nil {
+				errOnce.Do(func() {
+					firstErr = err
+				})
+				aborted.Store(true)
+				return
+			}
+
+			atomic.AddUint64(&c.size, page.Size)
+			reportProgress()
 		}
 
-		if viper.GetBool(key.DownloaderAsync) {
-			go d(page)
+		if async {
+			go d()
 		} else {
-			d(page)
+			d()
 		}
 	}
 
 	wg.Wait()
 
-	if err != nil {
+	if firstErr != nil {
 		c.isDownloaded = mo.Some(false)
-		return err
+		return firstErr
 	}
 
 	c.isDownloaded = mo.Some(!temp)
-	return
+	return nil
 }
 
 // formattedName of the chapter according to the template in the config.
@@ -120,7 +162,7 @@ func (c *Chapter) formattedName() (name string) {
 
 // SizeHuman is the same as Size but returns a human-readable string.
 func (c *Chapter) SizeHuman() string {
-	return humanize.Bytes(c.size)
+	return humanize.Bytes(atomic.LoadUint64(&c.size))
 }
 
 func (c *Chapter) Filename() (filename string) {
@@ -142,8 +184,41 @@ func (c *Chapter) IsDownloaded() bool {
 
 	path, _ := c.path(c.Manga.peekPath(), false)
 	exists, _ := filesystem.Api().Exists(path)
-	c.isDownloaded = mo.Some(exists)
-	return exists
+	if !exists {
+		c.isDownloaded = mo.Some(false)
+		return false
+	}
+
+	// Cheap EOCD / central-directory check for .cbz and .zip archives (RFC 0001 Q4 / Pillar E.5).
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".cbz" || ext == ".zip" {
+		if !isValidZipArchive(path) {
+			c.isDownloaded = mo.Some(false)
+			return false
+		}
+	}
+
+	c.isDownloaded = mo.Some(true)
+	return true
+}
+
+func isValidZipArchive(path string) bool {
+	f, err := filesystem.Api().Open(path)
+	if err != nil {
+		return false
+	}
+	defer util.Ignore(f.Close)
+
+	info, err := f.Stat()
+	if err != nil || info.IsDir() || info.Size() <= 0 {
+		return false
+	}
+
+	zr, err := zip.NewReader(f, info.Size())
+	if err != nil {
+		return false
+	}
+	return len(zr.File) > 0
 }
 
 func (c *Chapter) path(relativeTo string, createVolumeDir bool) (path string, err error) {
@@ -213,7 +288,7 @@ func (c *Chapter) ComicInfo() *ComicInfo {
 		Letterer:   strings.Join(c.Manga.Metadata.Staff.Lettering, ","),
 		Translator: strings.Join(c.Manga.Metadata.Staff.Translation, ","),
 		Tags:       strings.Join(c.Manga.Metadata.Tags, ","),
-		Notes:      "Downloaded with Mangal. https://github.com/metafates/mangal",
+		Notes:      "Downloaded with kaizen-mangal. https://github.com/kaizen-Architecture/kaizen-mangal",
 		Manga:      "YesAndRightToLeft",
 	}
 }

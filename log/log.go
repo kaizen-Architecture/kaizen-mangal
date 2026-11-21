@@ -3,9 +3,10 @@ package log
 import (
 	"errors"
 	"fmt"
-	"github.com/metafates/mangal/filesystem"
-	"github.com/metafates/mangal/key"
-	"github.com/metafates/mangal/where"
+	"github.com/kaizen-architecture/kaizen-mangal/constant"
+	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
+	"github.com/kaizen-architecture/kaizen-mangal/key"
+	"github.com/kaizen-architecture/kaizen-mangal/where"
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -30,7 +31,7 @@ func Setup() error {
 	}
 
 	today := time.Now().Format("2006-01-02")
-	logFilePath := filepath.Join(logsPath, fmt.Sprintf("%s.log", today))
+	logFilePath := filepath.Join(logsPath, fmt.Sprintf("%s-%s.log", constant.Mangal, today))
 	if !lo.Must(filesystem.Api().Exists(logFilePath)) {
 		lo.Must(filesystem.Api().Create(logFilePath))
 	}
