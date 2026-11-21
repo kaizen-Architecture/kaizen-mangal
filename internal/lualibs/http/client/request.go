@@ -51,7 +51,7 @@ func NewRequest(L *lua.LState) int {
 	}
 
 	req := &luaRequest{Request: httpReq}
-	req.Request.Header.Set(`User-Agent`, DefaultUserAgent)
+	req.Request.Header.Set(`User-Agent`, DefaultUserAgent())
 	L.Push(lvRequest(L, req))
 	return 1
 }
@@ -126,7 +126,7 @@ func NewFileRequest(L *lua.LState) int {
 	}
 
 	req := &luaRequest{Request: httpReq}
-	req.Request.Header.Set(`User-Agent`, DefaultUserAgent)
+	req.Request.Header.Set(`User-Agent`, DefaultUserAgent())
 	req.Request.Header.Set(`Content-Type`, writer.FormDataContentType())
 	L.Push(lvRequest(L, req))
 	return 1

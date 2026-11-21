@@ -1,7 +1,6 @@
 package http
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,23 +8,28 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	lua_json "github.com/kaizen-architecture/kaizen-mangal/internal/lualibs/json"
+	"github.com/kaizen-architecture/kaizen-mangal/network"
 	lua "github.com/yuin/gopher-lua"
 )
 
 const (
-	// default http User Agent
-	DefaultUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36`
 	// default http timeout
 	DefaultTimeout = 2 * time.Minute
 	// default don't ignore ssl
 	insecureSkipVerify = false
 )
 
+// DefaultUserAgent returns the active browser profile's User-Agent.
+func DefaultUserAgent() string {
+	return network.ActiveProfile().UserAgent
+}
+
 type LuaClient struct {
-	*http.Client
+	httpClient      network.HTTPClient
 	userAgent       string
 	basicAuthUser   *string
 	basicAuthPasswd *string
@@ -36,7 +40,14 @@ type LuaClient struct {
 // newLuaClient() returns new LuaClient
 func newLuaClient() *LuaClient {
 	jar, _ := cookiejar.New(&cookiejar.Options{})
-	return &LuaClient{Client: &http.Client{Jar: jar}}
+	hc, _ := network.NewClient(network.ClientOptions{
+		Timeout: DefaultTimeout,
+		Jar:     jar,
+	})
+	return &LuaClient{
+		httpClient: hc,
+		userAgent:  DefaultUserAgent(),
+	}
 }
 
 func (client *LuaClient) updateRequest(req *http.Request) {
@@ -46,7 +57,9 @@ func (client *LuaClient) updateRequest(req *http.Request) {
 		req.SetBasicAuth(*username, *password)
 	}
 	// set user agent
-	req.Header.Set(`User-Agent`, client.userAgent)
+	if client.userAgent != "" {
+		req.Header.Set("User-Agent", client.userAgent)
+	}
 	// set headers
 	if client.headers != nil {
 		for k, v := range client.headers {
@@ -62,12 +75,17 @@ func (client *LuaClient) DoRequest(req *http.Request) (*http.Response, error) {
 		dump, _ := httputil.DumpRequestOut(req, true)
 		log.Printf("[DEBUG] send request:\n%s\n", dump)
 	}
-	return client.Do(req)
+	return client.httpClient.Do(req)
 }
 
 // PostFormRequest() process Form
-func (client *LuaClient) PostFormRequest(url string, data url.Values) (*http.Response, error) {
-	return client.PostForm(url, data)
+func (client *LuaClient) PostFormRequest(targetURL string, data url.Values) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodPost, targetURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	return client.DoRequest(req)
 }
 
 func checkClient(L *lua.LState) *LuaClient {
@@ -97,88 +115,75 @@ func New(L *lua.LState) int {
 	if L.GetTop() > 0 {
 		config = L.CheckTable(1)
 	}
-	client := &LuaClient{Client: &http.Client{Timeout: DefaultTimeout}, userAgent: DefaultUserAgent}
-	transport := &http.Transport{}
-	// parse env
-	if proxyEnv := os.Getenv(`HTTP_PROXY`); proxyEnv != `` {
-		proxyUrl, err := url.Parse(proxyEnv)
-		if err == nil {
-			transport.Proxy = http.ProxyURL(proxyUrl)
+
+	opts := network.ClientOptions{
+		Timeout:            DefaultTimeout,
+		InsecureSkipVerify: insecureSkipVerify,
+	}
+	if proxyEnv := os.Getenv("HTTP_PROXY"); proxyEnv != "" {
+		if _, err := url.Parse(proxyEnv); err == nil {
+			opts.ProxyURL = proxyEnv
 		}
 	}
-	transport.MaxIdleConns = 0
-	transport.MaxIdleConnsPerHost = 1
-	transport.IdleConnTimeout = DefaultTimeout
-	// parse config
+
+	client := &LuaClient{
+		userAgent: DefaultUserAgent(),
+	}
+
 	if config != nil {
 		config.ForEach(func(k lua.LValue, v lua.LValue) {
-			// parse timeout
-			if k.String() == `timeout` {
+			switch k.String() {
+			case "timeout":
 				if value, ok := v.(lua.LNumber); ok {
-					client.Timeout = time.Duration(value) * time.Second
+					opts.Timeout = time.Duration(value) * time.Second
 				} else {
 					L.ArgError(1, "timeout must be number")
 				}
-			}
-			// parse proxy
-			if k.String() == `proxy` {
+			case "proxy":
 				if value, ok := v.(lua.LString); ok {
-					proxyUrl, err := url.Parse(value.String())
-					if err == nil {
-						transport.Proxy = http.ProxyURL(proxyUrl)
+					if _, err := url.Parse(value.String()); err == nil {
+						opts.ProxyURL = value.String()
 					} else {
 						L.ArgError(1, "http_proxy must be http(s)://<user>:<password>@host:<port>")
 					}
 				} else {
 					L.ArgError(1, "http_proxy must be string")
 				}
-			}
-			// parse insecure_ssl
-			if k.String() == `insecure_ssl` {
+			case "insecure_ssl":
 				if value, ok := v.(lua.LBool); ok {
-					transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: bool(value)}
+					opts.InsecureSkipVerify = bool(value)
 				} else {
 					L.ArgError(1, "insecure_ssl must be bool")
 				}
-			}
-			// parse user_agent
-			if k.String() == `user_agent` {
+			case "user_agent":
 				if _, ok := v.(lua.LString); ok {
 					client.userAgent = v.String()
 				} else {
 					L.ArgError(1, "user_agent must be string")
 				}
-			}
-			// parse basic_auth_user
-			if k.String() == `basic_auth_user` {
+			case "basic_auth_user":
 				if _, ok := v.(lua.LString); ok {
 					user := v.String()
 					client.basicAuthUser = &user
 				} else {
 					L.ArgError(1, "basic_auth_user must be string")
 				}
-			}
-			// parse basic_auth_password
-			if k.String() == `basic_auth_password` {
+			case "basic_auth_password":
 				if _, ok := v.(lua.LString); ok {
 					password := v.String()
 					client.basicAuthPasswd = &password
 				} else {
 					L.ArgError(1, "basic_auth_password must be string")
 				}
-			}
-			// parse debug
-			if k.String() == `debug` {
+			case "debug":
 				if value, ok := v.(lua.LBool); ok {
 					client.debug = bool(value)
 				} else {
 					L.ArgError(1, "debug must be bool")
 				}
-			}
-			// parse headers
-			if k.String() == `headers` {
+			case "headers":
 				if tbl, ok := v.(*lua.LTable); ok {
-					headers := make(map[string]string, 0)
+					headers := make(map[string]string)
 					data, err := lua_json.ValueEncode(tbl)
 					if err != nil {
 						L.ArgError(1, "headers must be table of key-values string")
@@ -194,10 +199,16 @@ func New(L *lua.LState) int {
 		})
 	}
 
-	// cookie support
 	jar, _ := cookiejar.New(&cookiejar.Options{})
-	client.Jar = jar
-	client.Transport = transport
+	opts.Jar = jar
+
+	hc, err := network.NewClient(opts)
+	if err != nil {
+		L.ArgError(1, err.Error())
+		return 0
+	}
+	client.httpClient = hc
+
 	ud := L.NewUserData()
 	ud.Value = client
 	L.SetMetatable(ud, L.GetTypeMetatable("http_client_ud"))

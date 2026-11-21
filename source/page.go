@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/kaizen-architecture/kaizen-mangal/constant"
 	"github.com/kaizen-architecture/kaizen-mangal/log"
 	"github.com/kaizen-architecture/kaizen-mangal/network"
 	"github.com/kaizen-architecture/kaizen-mangal/util"
@@ -41,7 +40,7 @@ func (p *Page) request() (*http.Request, error) {
 	if p.Chapter != nil && p.Chapter.URL != "" {
 		req.Header.Set("Referer", p.Chapter.URL)
 	}
-	req.Header.Set("User-Agent", constant.UserAgent)
+	req.Header.Set("User-Agent", network.ActiveProfile().UserAgent)
 	return req, nil
 }
 

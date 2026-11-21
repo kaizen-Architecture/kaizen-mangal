@@ -409,6 +409,26 @@ panic, fatal, error, warn, info, debug, trace`,
 		true,
 		"Use colors in CLI help page",
 	},
+	{
+		key.NetworkImpersonate,
+		"chrome_133",
+		"Pinned TLS/H2 browser fingerprint profile (chrome_133, chrome_131, firefox_135, firefox_133, safari_16_0, none)",
+	},
+	{
+		key.NetworkDomainMinIntervalMs,
+		0,
+		"Minimum spacing in milliseconds between requests to the same domain across processes (0 = disabled)",
+	},
+	{
+		key.NetworkDomainMaxConcurrency,
+		8,
+		"Maximum parallel requests per host",
+	},
+	{
+		key.NetworkRetryAfterMax,
+		30,
+		"Maximum seconds to honor a Retry-After header on 429/503 before returning the error",
+	},
 }
 
 func init() {

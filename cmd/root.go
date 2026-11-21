@@ -13,6 +13,7 @@ import (
 	"github.com/kaizen-architecture/kaizen-mangal/icon"
 	"github.com/kaizen-architecture/kaizen-mangal/key"
 	"github.com/kaizen-architecture/kaizen-mangal/log"
+	"github.com/kaizen-architecture/kaizen-mangal/network"
 	"github.com/kaizen-architecture/kaizen-mangal/provider"
 	"github.com/kaizen-architecture/kaizen-mangal/style"
 	"github.com/kaizen-architecture/kaizen-mangal/tui"
@@ -118,6 +119,9 @@ func handleErr(err error) {
 	if err != nil {
 		log.Error(err)
 		_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", icon.Get(icon.Fail), strings.Trim(err.Error(), " \n"))
-		os.Exit(1)
+		if line := network.FormatErrorLine(err); line != "" {
+			_, _ = fmt.Fprintln(os.Stderr, line)
+		}
+		os.Exit(network.ExitCodeFor(err))
 	}
 }
