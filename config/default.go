@@ -454,6 +454,26 @@ panic, fatal, error, warn, info, debug, trace`,
 		900,
 		"Per-domain circuit breaker cooldown in seconds after consecutive challenge solve failures",
 	},
+	{
+		key.HeadlessCDPURL,
+		"",
+		"Remote Chrome DevTools Protocol WebSocket URL (e.g. ws://browserless:3000)",
+	},
+	{
+		key.HeadlessBin,
+		"",
+		"Explicit path to Chromium or Google Chrome executable",
+	},
+	{
+		key.HeadlessTimeout,
+		30,
+		"Default per-operation timeout in seconds for headless browser actions",
+	},
+	{
+		key.HeadlessAllowDownload,
+		true,
+		"Allow Rod managed Chromium download if no local browser or CDP URL is available (false in Docker images)",
+	},
 }
 
 func init() {

@@ -14,7 +14,8 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/darylhjd/mangodex v0.0.0-20211231093527-e4a91c518fa0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/go-rod/rod v0.112.3
+	github.com/go-rod/rod v0.116.2
+	github.com/go-rod/stealth v0.4.9
 	github.com/gocolly/colly/v2 v2.1.0
 	github.com/invopop/jsonschema v0.7.0
 	github.com/ivanpirog/coloredcobra v1.0.1
@@ -96,9 +97,11 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
+	github.com/ysmood/fetchup v0.2.3 // indirect
 	github.com/ysmood/goob v0.4.0 // indirect
+	github.com/ysmood/got v0.40.0 // indirect
 	github.com/ysmood/gson v0.7.3 // indirect
-	github.com/ysmood/leakless v0.8.0 // indirect
+	github.com/ysmood/leakless v0.9.0 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/image v0.3.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect

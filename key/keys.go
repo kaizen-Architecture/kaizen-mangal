@@ -3,7 +3,7 @@ package key
 // DefinedFieldsCount is the number of fields defined in this package.
 // You have to manually update this number when you add a new field
 // to check later if every field has a defined default value
-const DefinedFieldsCount = 61
+const DefinedFieldsCount = 65
 
 const (
 	DownloaderPath                = "downloader.path"
@@ -110,4 +110,9 @@ const (
 	NetworkCloudflareSolverTimeout    = "network.cloudflare_solver_timeout"
 	NetworkCloudflareSolverFallback   = "network.cloudflare_solver_fallback"
 	NetworkCloudflareBreakerCooldown  = "network.cloudflare_breaker_cooldown"
+
+	HeadlessCDPURL        = "headless.cdp_url"
+	HeadlessBin           = "headless.bin"
+	HeadlessTimeout       = "headless.timeout"
+	HeadlessAllowDownload = "headless.allow_download"
 )
