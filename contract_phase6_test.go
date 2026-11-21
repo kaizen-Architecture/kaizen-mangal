@@ -297,11 +297,13 @@ function ChapterPages(u) return {} end
 		if !strings.Contains(combined, network.BreakerOpenMarker) {
 			t.Errorf("expected %q in output, got:\n%s", network.BreakerOpenMarker, combined)
 		}
-		if !strings.Contains(stderr, `[kaizen-mangal:error]`) {
-			t.Errorf("expected structured error line on stderr, got:\n%s", stderr)
+		if !strings.Contains(stderr, `[kaizen-mangal:error]`) || !strings.Contains(stderr, `"code":"breaker_open"`) {
+			t.Errorf("expected structured breaker_open error line on stderr, got:\n%s", stderr)
 		}
+		// Strip the random httptest.Server URL/port (e.g. :42953) before checking for forbidden HTTP status codes.
+		sanitized := strings.ReplaceAll(combined, cfServer.URL, "<test-url>")
 		for _, forbidden := range []string{"503", "429", "timeout", "connection refused"} {
-			if strings.Contains(strings.ToLower(combined), forbidden) {
+			if strings.Contains(strings.ToLower(sanitized), forbidden) {
 				t.Errorf("breaker-open output must not contain retryable keyword %q:\n%s", forbidden, combined)
 			}
 		}

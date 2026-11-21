@@ -182,8 +182,11 @@ func isConnectionRefusedError(err error, lower string) bool {
 }
 
 func classifyErrorCode(err error) string {
-	lower := strings.ToLower(err.Error())
+	raw := err.Error()
+	lower := strings.ToLower(raw)
 	switch {
+	case strings.Contains(raw, BreakerOpenMarker):
+		return "breaker_open"
 	case strings.Contains(lower, "cloudflare"):
 		return "cf_challenge"
 	case strings.Contains(lower, "timeout") || strings.Contains(lower, "deadline exceeded"):
