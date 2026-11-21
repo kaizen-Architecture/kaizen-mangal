@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"net/http/cookiejar"
 	"net/http/httputil"
 	"net/url"
 	"os"
@@ -39,10 +38,9 @@ type LuaClient struct {
 
 // newLuaClient() returns new LuaClient
 func newLuaClient() *LuaClient {
-	jar, _ := cookiejar.New(&cookiejar.Options{})
 	hc, _ := network.NewClient(network.ClientOptions{
 		Timeout: DefaultTimeout,
-		Jar:     jar,
+		Jar:     network.SharedCookieJar(),
 	})
 	return &LuaClient{
 		httpClient: hc,
@@ -199,8 +197,7 @@ func New(L *lua.LState) int {
 		})
 	}
 
-	jar, _ := cookiejar.New(&cookiejar.Options{})
-	opts.Jar = jar
+	opts.Jar = network.SharedCookieJar()
 
 	hc, err := network.NewClient(opts)
 	if err != nil {

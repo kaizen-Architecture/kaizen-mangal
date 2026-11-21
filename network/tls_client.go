@@ -169,9 +169,23 @@ func (c *TLSClient) RoundTrip(req *http.Request) (*http.Response, error) {
 	if !profile.HasTLSProfile && std != nil {
 		outReq := req.Clone(req.Context())
 		applyProfileHeadersStd(outReq, profile)
+		if jar != nil && req.URL != nil && outReq.Header.Get("Cookie") == "" {
+			if cookies := jar.Cookies(req.URL); len(cookies) > 0 {
+				parts := make([]string, 0, len(cookies))
+				for _, ck := range cookies {
+					parts = append(parts, ck.Name+"="+ck.Value)
+				}
+				outReq.Header.Set("Cookie", strings.Join(parts, "; "))
+			}
+		}
 		resp, err := std.Transport.RoundTrip(outReq)
 		if err != nil {
 			return nil, NormalizeError(err, domain, 0)
+		}
+		if jar != nil && req.URL != nil {
+			if setCookies := resp.Cookies(); len(setCookies) > 0 {
+				jar.SetCookies(req.URL, setCookies)
+			}
 		}
 		return resp, nil
 	}

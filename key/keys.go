@@ -3,7 +3,7 @@ package key
 // DefinedFieldsCount is the number of fields defined in this package.
 // You have to manually update this number when you add a new field
 // to check later if every field has a defined default value
-const DefinedFieldsCount = 56
+const DefinedFieldsCount = 61
 
 const (
 	DownloaderPath                = "downloader.path"
@@ -101,8 +101,13 @@ const (
 const (
 	CliColored = "cli.colored"
 
-	NetworkImpersonate          = "network.impersonate"
-	NetworkDomainMinIntervalMs  = "network.domain_min_interval_ms"
-	NetworkDomainMaxConcurrency = "network.domain_max_concurrency"
-	NetworkRetryAfterMax        = "network.retry_after_max"
+	NetworkImpersonate                = "network.impersonate"
+	NetworkCookieJarPath              = "network.cookie_jar_path"
+	NetworkDomainMinIntervalMs        = "network.domain_min_interval_ms"
+	NetworkDomainMaxConcurrency       = "network.domain_max_concurrency"
+	NetworkRetryAfterMax              = "network.retry_after_max"
+	NetworkCloudflareSolverURL        = "network.cloudflare_solver_url"
+	NetworkCloudflareSolverTimeout    = "network.cloudflare_solver_timeout"
+	NetworkCloudflareSolverFallback   = "network.cloudflare_solver_fallback"
+	NetworkCloudflareBreakerCooldown  = "network.cloudflare_breaker_cooldown"
 )

@@ -10,9 +10,23 @@ var (
 	defaultMu        sync.Mutex
 	defaultTransport http.RoundTripper
 	defaultProfile   string
+
+	sharedJar     = NewPersistentCookieJar("")
+	sharedBreaker = &DomainCircuitBreaker{}
 )
 
-// DefaultTransport returns the shared impersonated + polite http.RoundTripper,
+// SharedCookieJar returns the process-wide persistent cookie jar shared across
+// network.Client, Colly generic scrapers, and Lua http/headless clients.
+func SharedCookieJar() *PersistentCookieJar {
+	return sharedJar
+}
+
+// SharedBreaker returns the process-wide per-domain challenge circuit breaker.
+func SharedBreaker() *DomainCircuitBreaker {
+	return sharedBreaker
+}
+
+// DefaultTransport returns the shared Challenge -> Politeness -> TLSImpersonation RoundTripper,
 // rebuilding automatically if network.impersonate changes in Viper.
 func DefaultTransport() http.RoundTripper {
 	active := ActiveProfile()
@@ -26,16 +40,26 @@ func DefaultTransport() http.RoundTripper {
 	tc, err := NewTLSClient(ClientOptions{
 		Profile: active.Name,
 		Timeout: time.Minute,
+		Jar:     sharedJar,
 	})
 	if err != nil {
-		// Safe fallback to stdlib transport if profile init ever fails.
 		tr := http.DefaultTransport.(*http.Transport).Clone()
-		defaultTransport = &PoliteRoundTripper{Base: tr}
+		polite := &PoliteRoundTripper{Base: tr}
+		defaultTransport = &ChallengeRoundTripper{
+			Base:    polite,
+			Jar:     sharedJar,
+			Breaker: sharedBreaker,
+		}
 		defaultProfile = "none"
 		return defaultTransport
 	}
 
-	defaultTransport = &PoliteRoundTripper{Base: tc}
+	polite := &PoliteRoundTripper{Base: tc}
+	defaultTransport = &ChallengeRoundTripper{
+		Base:    polite,
+		Jar:     sharedJar,
+		Breaker: sharedBreaker,
+	}
 	defaultProfile = active.Name
 	return defaultTransport
 }
@@ -52,23 +76,40 @@ func (dynamicRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 var Client = &http.Client{
 	Timeout:   time.Minute,
 	Transport: dynamicRoundTripper{},
+	Jar:       sharedJar,
 }
 
-// NewClient constructs a new swappable HTTPClient backed by TLSClient + PoliteRoundTripper.
+// NewClient constructs a new swappable HTTPClient backed by Challenge -> Polite -> TLSClient.
 func NewClient(opts ClientOptions) (HTTPClient, error) {
 	if opts.Profile == "" {
 		opts.Profile = ActiveProfile().Name
+	}
+	if opts.Jar == nil {
+		opts.Jar = sharedJar
 	}
 	tc, err := NewTLSClient(opts)
 	if err != nil {
 		return nil, err
 	}
-	if opts.DisablePoliteness {
-		return tc, nil
+
+	var rt http.RoundTripper = tc
+	if !opts.DisablePoliteness {
+		rt = &PoliteRoundTripper{Base: rt}
 	}
+
+	jar, _ := opts.Jar.(*PersistentCookieJar)
+	if jar == nil {
+		jar = sharedJar
+	}
+	rt = &ChallengeRoundTripper{
+		Base:    rt,
+		Jar:     jar,
+		Breaker: sharedBreaker,
+	}
+
 	return &politeHTTPClient{
 		inner: tc,
-		rt:    &PoliteRoundTripper{Base: tc},
+		rt:    rt,
 	}, nil
 }
 

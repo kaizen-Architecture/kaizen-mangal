@@ -429,6 +429,31 @@ panic, fatal, error, warn, info, debug, trace`,
 		30,
 		"Maximum seconds to honor a Retry-After header on 429/503 before returning the error",
 	},
+	{
+		key.NetworkCookieJarPath,
+		"",
+		"Path to shared persistent cookie jar JSON (empty uses <cache>/kaizen-mangal-cookies.json)",
+	},
+	{
+		key.NetworkCloudflareSolverURL,
+		"",
+		"External FlareSolverr / Byparr v1 endpoint URL (e.g. http://flaresolverr:8191/v1)",
+	},
+	{
+		key.NetworkCloudflareSolverTimeout,
+		60,
+		"Cloudflare solver timeout in seconds",
+	},
+	{
+		key.NetworkCloudflareSolverFallback,
+		false,
+		"Fall back to local/CDP headless browser when external solver is unset or fails (high RAM: ~300-500 MB per concurrent Chromium instance)",
+	},
+	{
+		key.NetworkCloudflareBreakerCooldown,
+		900,
+		"Per-domain circuit breaker cooldown in seconds after consecutive challenge solve failures",
+	},
 }
 
 func init() {

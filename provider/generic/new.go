@@ -30,6 +30,7 @@ func New(conf *Configuration) source.Source {
 	baseCollector := colly.NewCollector(collectorOptions...)
 	baseCollector.SetRequestTimeout(20 * time.Second)
 	baseCollector.WithTransport(network.DefaultTransport())
+	baseCollector.SetCookieJar(network.SharedCookieJar())
 
 	mangasCollector := baseCollector.Clone()
 	mangasCollector.OnRequest(func(r *colly.Request) {
