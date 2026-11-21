@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com), and this project adheres to
 [Semantic Versioning](https://semver.org).
 
+## [1.1.0](https://github.com/kaizen-Architecture/kaizen-mangal/compare/v1.0.0...v1.1.0) (2026-11-21)
+
+
+### Features
+
+* **cli:** add version --json, sources validate, doctor, and release-please ([5b79939](https://github.com/kaizen-Architecture/kaizen-mangal/commit/5b79939091935616479fa48769ee3e5acfac835a))
+* **core:** rebrand binary to kaizen-mangal for coexistence, gate live tests and modernize CI ([65a6639](https://github.com/kaizen-Architecture/kaizen-mangal/commit/65a663960b0c1028d17a14a83f585eaf0ce44f9b))
+* **core:** RFC 0001 Stage 1 — Network resilience, integrity, headless overhaul & CLI contracts ([e297b6f](https://github.com/kaizen-Architecture/kaizen-mangal/commit/e297b6feed87ed88f17a1e2703c04de755efc582))
+* **headless:** upgrade go-rod with stealth, deterministic resolution, and Tier 2 fallback ([0895adc](https://github.com/kaizen-Architecture/kaizen-mangal/commit/0895adc0fefb80b4abd459538b0ff5cca6f4ba70))
+* **integrity:** add magic-byte page validation, atomic CBZ/ZIP writes, race-free downloader and per-PID temp cleanup ([254cd64](https://github.com/kaizen-Architecture/kaizen-mangal/commit/254cd64bf564d5e08106bbb726d0bf0cf7854381))
+* **network:** add persistent cookie jar, Cloudflare Tier 1 solver and per-domain circuit breaker ([5bbda6f](https://github.com/kaizen-Architecture/kaizen-mangal/commit/5bbda6ff6cf7948652210849c53aab1292f474cd))
+* **network:** add swappable HTTPClient with bogdanfinn/tls-client impersonation, politeness and structured errors ([0ede4d9](https://github.com/kaizen-Architecture/kaizen-mangal/commit/0ede4d9636933de967758041ee1b055eeaa4a6ed))
+
+
+### Bug Fixes
+
+* **go:** set go 1.27.4 directive in go.mod so CI uses Go 1.27 ([4600f45](https://github.com/kaizen-Architecture/kaizen-mangal/commit/4600f45c6c39f80fc60a55cd0eafcecf5972bf2b))
+* **network:** classify wrapped Lua breaker_open errors and avoid flaky port match in test ([eafcbd8](https://github.com/kaizen-Architecture/kaizen-mangal/commit/eafcbd81607715cf89d57feb997255e636d03840))
+* **vet:** remove unused fmt import in internal/lualibs/yaml/api.go ([323eda3](https://github.com/kaizen-Architecture/kaizen-mangal/commit/323eda30f076f336d7d32e8c5336540e0264bef6))
+* **vet:** use constant format strings in lua RaiseError calls for Go 1.27 vet ([ba17506](https://github.com/kaizen-Architecture/kaizen-mangal/commit/ba17506728ed30c703d9e8158642a2117e9ceabd))
+
 ## 4.0.6
 
 - Update dependencies
