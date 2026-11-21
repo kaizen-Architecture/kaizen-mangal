@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'Release tag to build and publish (e.g. v1.2.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -17,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tag_name || github.ref }}
           fetch-depth: 0
 
       - name: Set up Go
@@ -37,8 +44,12 @@ jobs:
     name: Build & Push Multi-Arch GHCR Release Images
     needs: goreleaser
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name || github.ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -61,10 +72,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/kaizen-architecture/kaizen-mangal:${{ github.ref_name }}
+            ghcr.io/kaizen-architecture/kaizen-mangal:${{ env.RELEASE_TAG }}
             ghcr.io/kaizen-architecture/kaizen-mangal:latest
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ env.RELEASE_TAG }}
             REVISION=${{ github.sha }}
             BUILT_BY=github-actions
 
@@ -76,9 +87,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/kaizen-architecture/kaizen-mangal:${{ github.ref_name }}-chromium
+            ghcr.io/kaizen-architecture/kaizen-mangal:${{ env.RELEASE_TAG }}-chromium
             ghcr.io/kaizen-architecture/kaizen-mangal:latest-chromium
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ env.RELEASE_TAG }}
             REVISION=${{ github.sha }}
             BUILT_BY=github-actions

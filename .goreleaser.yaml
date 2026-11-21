@@ -76,6 +76,7 @@ changelog:
       - "Merge branch"
 
 release:
+  mode: append
   github:
     owner: kaizen-Architecture
     name: kaizen-mangal
