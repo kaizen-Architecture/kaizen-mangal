@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com), and this project adheres to
 [Semantic Versioning](https://semver.org).
 
+## [1.2.0](https://github.com/kaizen-Architecture/kaizen-mangal/compare/v1.1.0...v1.2.0) (2026-11-21)
+
+
+### Features
+
+* **provider:** retire legacy built-in Go providers (RFC 0001 Phase 8) ([9c347d6](https://github.com/kaizen-Architecture/kaizen-mangal/commit/9c347d6347c67678c866c0136e1f85dcbbfa3f87))
+* **provider:** retire legacy built-in Go providers (RFC 0001 Phase 8) ([c8728d1](https://github.com/kaizen-Architecture/kaizen-mangal/commit/c8728d1714382dcb2c5d130ce53e9d70b267bcf1))
+
+
+### Bug Fixes
+
+* **provider:** prioritize custom Lua sources and support case-insensitive lookup ([6472a64](https://github.com/kaizen-Architecture/kaizen-mangal/commit/6472a64c5acbd8c58837766234a21a9a676f0f2f))
+
 ## [1.1.0](https://github.com/kaizen-Architecture/kaizen-mangal/compare/v1.0.0...v1.1.0) (2026-11-21)
 
 
