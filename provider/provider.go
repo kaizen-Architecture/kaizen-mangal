@@ -1,14 +1,16 @@
 package provider
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/kaizen-architecture/kaizen-mangal/filesystem"
 	"github.com/kaizen-architecture/kaizen-mangal/provider/custom"
 	"github.com/kaizen-architecture/kaizen-mangal/source"
 	"github.com/kaizen-architecture/kaizen-mangal/util"
 	"github.com/kaizen-architecture/kaizen-mangal/where"
 	"github.com/samber/lo"
-	"os"
-	"path/filepath"
 )
 
 type Provider struct {
@@ -71,14 +73,29 @@ func Customs() []*Provider {
 }
 
 func Get(name string) (*Provider, bool) {
-	for _, provider := range Builtins() {
+	customs := Customs()
+	for _, provider := range customs {
 		if provider.Name == name {
 			return provider, true
 		}
 	}
 
-	for _, provider := range Customs() {
+	builtins := Builtins()
+	for _, provider := range builtins {
 		if provider.Name == name {
+			return provider, true
+		}
+	}
+
+	// Case-insensitive fallback to custom Lua sources (e.g. "Mangadex" -> "MangaDex.lua")
+	for _, provider := range customs {
+		if strings.EqualFold(provider.Name, name) {
+			return provider, true
+		}
+	}
+
+	for _, provider := range builtins {
+		if strings.EqualFold(provider.Name, name) {
 			return provider, true
 		}
 	}
